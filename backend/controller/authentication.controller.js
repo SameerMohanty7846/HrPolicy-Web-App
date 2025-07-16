@@ -94,3 +94,27 @@ export const registerAdmin = (req, res) => {
         });
     });
 };
+// Register New HR
+export const registerHR = (req, res) => {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+        return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    bcrypt.hash(password, SALT_ROUNDS, (err, hashedPassword) => {
+        if (err) {
+            console.error('Error hashing password:', err);
+            return res.status(500).json({ message: 'Error processing request' });
+        }
+
+        const query = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'hr')";
+        db.query(query, [name, email, hashedPassword], (err, result) => {
+            if (err) {
+                console.error('Error registering HR:', err);
+                return res.status(500).json({ message: 'Internal server error' });
+            }
+            return res.status(201).json({ message: 'HR registered successfully' });
+        });
+    });
+};

@@ -21,8 +21,8 @@ const Login = () => {
       const response = await axios.post('http://localhost:2000/api/login', formData);
       const { token, user, message } = response.data;
 
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('user', JSON.stringify(user));
 
       alert(message);
 
@@ -30,6 +30,10 @@ const Login = () => {
         navigate('/admin/dashboard');
       } else if (user.role === 'employee') {
         navigate('/employee/dashboard');
+      } else if (user.role === 'hr') {
+        navigate('/hr/dashboard');
+      } else {
+        alert('Unknown role. Cannot redirect.');
       }
     } catch (error) {
       alert('Invalid credentials or error during login.');
