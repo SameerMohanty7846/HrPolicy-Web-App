@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+// Import Components
+import AddEmployee from './AddEmployee';
+import ViewEmployees from './ViewEmployees';
+import EmployeePermissionList from './EmployeePermissionList';  // Import PermissionComponent here
+
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [activeComponent, setActiveComponent] = useState('');
 
   useEffect(() => {
     const storedUser = JSON.parse(sessionStorage.getItem('user'));
@@ -11,31 +19,60 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  const getInitial = (name) => {
-    return name ? name.charAt(0).toUpperCase() : '';
-  };
-
   const handleLogout = () => {
     sessionStorage.clear();
-    window.location.href = '/';
+    navigate('/');
+  };
+
+  const renderContent = () => {
+    switch (activeComponent) {
+      case 'addEmployee':
+        return <AddEmployee />;
+      case 'viewEmployees':
+        return <ViewEmployees />;
+      case 'permissions':
+        return <EmployeePermissionList />;    // Render Permission List
+      default:
+        return (
+          <div className="text-center mt-5">
+            <h1>Welcome, {user?.name}!</h1>
+            <p className="lead">Select an option from the sidebar to proceed.</p>
+          </div>
+        );
+    }
   };
 
   return (
     <div className="layout-bg d-flex" style={{ height: '100vh' }}>
-      <div className="glass-sidebar d-flex flex-column text-white p-3" style={{ width: '300px', overflowY: 'auto' }}>
+      <div
+        className="glass-sidebar d-flex flex-column text-white p-3"
+        style={{ width: '220px', overflowY: 'auto', position: 'fixed', height: '100vh' }}
+      >
         {user && (
           <div className="text-center mb-4">
             <div
               className="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center border border-white"
-              style={{ width: '80px', height: '80px', fontSize: '2rem' }}
+              style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}
             >
-              {getInitial(user.name)}
+              {user.name?.charAt(0).toUpperCase()}
             </div>
             <div className="mt-2 fw-bold">{user.name}</div>
-            <div>{user.email}</div>
+            <div style={{ fontSize: '0.85rem' }}>{user.email}</div>
             <div className="text-capitalize">{user.role}</div>
           </div>
         )}
+
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('addEmployee')}>
+          Add Employee
+        </button>
+
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('viewEmployees')}>
+          View Employees
+        </button>
+
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('permissions')}>
+          Permissions
+        </button>
 
         <button className="btn btn-danger mt-3" onClick={handleLogout}>
           Logout
@@ -44,15 +81,9 @@ const AdminDashboard = () => {
 
       <div
         className="flex-grow-1 p-4 text-white"
-        style={{ overflowY: 'auto', width: 'calc(100% - 300px)' }}
+        style={{ marginLeft: '220px', width: 'calc(100% - 220px)', overflowY: 'auto' }}
       >
-        {/* Right side content */}
-        {user && (
-          <div className="text-center mt-5">
-            <h1>Welcome, {user.name}!</h1>
-            <p className="lead">You are logged in as <strong>{user.role}</strong>.</p>
-          </div>
-        )}
+        {renderContent()}
       </div>
 
       <style>

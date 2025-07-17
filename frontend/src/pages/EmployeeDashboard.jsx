@@ -24,20 +24,30 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="layout-bg d-flex" style={{ height: '100vh' }}>
-      <div className="glass-sidebar d-flex flex-column text-white p-3" style={{ width: '300px', overflowY: 'auto' }}>
+      <div
+        className="glass-sidebar d-flex flex-column text-white p-3"
+        style={{ width: '220px', overflowY: 'auto', position: 'fixed', height: '100vh' }}
+      >
         {user && (
           <div className="text-center mb-4">
             <div
               className="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center border border-white"
-              style={{ width: '80px', height: '80px', fontSize: '2rem' }}
+              style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}
             >
               {getInitial(user.name)}
             </div>
             <div className="mt-2 fw-bold">{user.name}</div>
-            <div>{user.email}</div>
+            <div style={{ fontSize: '0.85rem' }}>{user.email}</div>
             <div className="text-capitalize">{user.role}</div>
           </div>
         )}
+
+        <button
+          className="btn btn-light mt-2"
+          onClick={() => navigate('/employee/granted-permissions')}
+        >
+          Granted Permissions
+        </button>
 
         <button className="btn btn-danger mt-3" onClick={handleLogout}>
           Logout
@@ -46,9 +56,8 @@ const EmployeeDashboard = () => {
 
       <div
         className="flex-grow-1 p-4 text-white"
-        style={{ overflowY: 'auto', width: 'calc(100% - 300px)' }}
+        style={{ marginLeft: '220px', width: 'calc(100% - 220px)', overflowY: 'auto' }}
       >
-        {/* Right side content */}
         {user && (
           <div className="text-center mt-5">
             <h1>Welcome, {user.name}!</h1>

@@ -5,10 +5,12 @@ import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import HrDashboard from './pages/HrDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import PermissionComponent from './pages/PermissionComponent'
 import AddEmployee from './pages/AddEmployee'
 import ViewEmployees from './pages/ViewEmployees';
 import HrPolicy from './pages/HrPolicy';
 import AssignTask from './pages/AssignTask';
+import EmployeeGrantedPermission from './pages/EmployeeGrantedPermission';
 const App = () => {
   return (
     <BrowserRouter>
@@ -35,9 +37,15 @@ const App = () => {
             <ProtectedRoute allowedRole="hr" Component={HrDashboard} />
           }
         />
-    
+        <Route path="/admin/permission/:id" element={<PermissionComponent />} />
+        <Route
+          path="/employee/granted-permissions"
+          element={<EmployeeGrantedPermission />}
+        />
+
 
       </Routes>
+
     </BrowserRouter>
   );
 };

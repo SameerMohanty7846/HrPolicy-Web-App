@@ -7,7 +7,6 @@ import HrHome from './HrHome';
 import AddEmployee from './AddEmployee';
 import ViewEmployees from './ViewEmployees';
 import HrPolicy from './HrPolicy';
-
 import AssignTask from './AssignTask';
 // import ViewSalary from './ViewSalary';
 // import RegisterTable from './RegisterTable';
@@ -46,12 +45,12 @@ const HrDashboard = () => {
         return <AssignTask />;
       case 'hrPolicy':
         return <HrPolicy />;
-      case 'viewSalary':
-        return <ViewSalary />;
-      case 'registerTable':
-        return <RegisterTable />;
-      case 'taskData':
-        return <TaskData />;
+      // case 'viewSalary':
+      //   return <ViewSalary />;
+      // case 'registerTable':
+      //   return <RegisterTable />;
+      // case 'taskData':
+      //   return <TaskData />;
       default:
         return <HrHome user={user} />;
     }
@@ -61,18 +60,18 @@ const HrDashboard = () => {
     <div className="layout-bg d-flex" style={{ height: '100vh' }}>
       <div
         className="glass-sidebar d-flex flex-column text-white p-3"
-        style={{ width: '300px', overflowY: 'auto', position: 'fixed', height: '100vh' }}
+        style={{ width: '220px', overflowY: 'auto', position: 'fixed', height: '100vh' }}
       >
         {user && (
           <div className="text-center mb-4">
             <div
               className="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center border border-white"
-              style={{ width: '80px', height: '80px', fontSize: '2rem' }}
+              style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}
             >
               {getInitial(user.name)}
             </div>
             <div className="mt-2 fw-bold">{user.name}</div>
-            <div>{user.email}</div>
+            <div style={{ fontSize: '0.85rem' }}>{user.email}</div>
             <div className="text-capitalize">{user.role}</div>
           </div>
         )}
@@ -85,19 +84,13 @@ const HrDashboard = () => {
           View Employees
         </button>
 
-         <button className="btn btn-light mt-2" onClick={() => setActiveComponent('hrPolicy')}>
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('hrPolicy')}>
           HR Policy
         </button>
 
         <button className="btn btn-light mt-2" onClick={() => setActiveComponent('assignTask')}>
           Assign Task
         </button>
-
-        {/*
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('taskData')}>
-          Task Data
-        </button> */}
 
         <button className="btn btn-danger mt-3" onClick={handleLogout}>
           Logout
@@ -106,7 +99,7 @@ const HrDashboard = () => {
 
       <div
         className="flex-grow-1 p-4 text-white"
-        style={{ marginLeft: '300px', width: 'calc(100% - 300px)', overflowY: 'auto' }}
+        style={{ marginLeft: '220px', width: 'calc(100% - 220px)', overflowY: 'auto' }}
       >
         {renderContent()}
       </div>

@@ -1,0 +1,89 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const EmployeeGrantedPermission = () => {
+  const [permissions, setPermissions] = useState({});
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = JSON.parse(sessionStorage.getItem('user'));
+    if (storedUser) {
+      fetchGrantedPermissions(storedUser.id);
+
+      const interval = setInterval(() => {
+        fetchGrantedPermissions(storedUser.id);
+      }, 10000); // Refresh every 10 seconds
+
+      return () => clearInterval(interval); // Clear interval on unmount
+    }
+  }, []);
+
+  const fetchGrantedPermissions = async (employeeId) => {
+    try {
+      const response = await axios.get(`http://localhost:2000/api/employee/${employeeId}/granted-permissions`);
+      setPermissions(response.data);
+    } catch (error) {
+      console.error('Error fetching granted permissions:', error);
+      alert('Failed to load granted permissions');
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/employee/dashboard');
+  };
+
+  const grantedPermissions = Object.entries(permissions).filter(([key, value]) => key.startsWith('E_') && value);
+
+  const buttonColors = {
+    E_add: 'primary',
+    E_read: 'success',
+    E_edit: 'warning',
+    E_delete: 'danger'
+  };
+
+  return (
+    <div className="permission-bg d-flex justify-content-center align-items-center min-vh-100">
+      <div className="glass-card p-5 rounded-4 text-center" style={{ width: '400px' }}>
+        <h2 className="mb-4 text-white">Granted Permissions</h2>
+
+        <div className="d-flex flex-column align-items-center mb-3 w-100">
+          {grantedPermissions.length > 0 ? (
+            grantedPermissions.map(([key]) => (
+              <button
+                key={key}
+                className={`btn btn-${buttonColors[key]} mb-2 fw-semibold w-100`}
+                disabled
+              >
+                {key.replace('E_', '')}
+              </button>
+            ))
+          ) : (
+            <p className="text-light">No Permissions Granted</p>
+          )}
+        </div>
+
+        <button onClick={handleBack} className="btn btn-light mt-3 w-100 fw-bold">
+          Back to Dashboard
+        </button>
+      </div>
+
+      <style>
+        {`
+          .permission-bg {
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+          }
+          .glass-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+          }
+        `}
+      </style>
+    </div>
+  );
+};
+
+export default EmployeeGrantedPermission;

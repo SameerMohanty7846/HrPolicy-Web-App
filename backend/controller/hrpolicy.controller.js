@@ -27,7 +27,7 @@ export const registerEmployee = (req, res) => {
                 return res.status(500).send('Error creating user password');
             }
 
-            // ✅ Insert employee_id into users table
+            // Insert employee_id into users table
             const insertUserSQL = `
                 INSERT INTO users (employee_id, name, email, password, role) 
                 VALUES (?, ?, ?, ?, ?)`;
@@ -38,65 +38,77 @@ export const registerEmployee = (req, res) => {
                     return res.status(500).send('Employee added, but user creation failed');
                 }
 
-                const joiningDate = new Date(dateOfJoining);
-                const today = new Date();
-                const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
-                const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
+                // ✅ Insert default EmployeePermission with all permissions as false
+                const insertPermissionSQL = `
+                    INSERT INTO EmployeePermission (employee_id, E_add, E_read, E_edit, E_delete)
+                    VALUES (?, false, false, false, false)`;
 
-                if (inCompanyExperience < 0.5) {
-                    const insertIncrementSQL = `
-                        INSERT INTO employee_increments 
-                        (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                db.query(insertPermissionSQL, [empId], (permErr) => {
+                    if (permErr) {
+                        console.error('Error inserting EmployeePermission:', permErr);
+                        // Proceed further even if permission fails
+                    }
 
-                    db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, 0, 'Not Eligible', 0], (err3) => {
-                        if (err3) {
-                            console.error('Error inserting increment:', err3);
-                            return res.status(500).send('Employee added, but increment insertion failed');
-                        }
-                        res.send('Employee, User account with hashed password, and Increment details added successfully (Not Eligible for Increment)');
-                    });
-                } else {
-                    const avgRatingSQL = `SELECT AVG(rating) AS avgRating FROM tasks WHERE employee_id = ?`;
+                    const joiningDate = new Date(dateOfJoining);
+                    const today = new Date();
+                    const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
+                    const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
 
-                    db.query(avgRatingSQL, [empId], (err2, ratingResults) => {
-                        if (err2) {
-                            console.error('Error fetching average rating:', err2);
-                            return res.status(500).send('Employee added, but failed to fetch average rating');
-                        }
+                    if (inCompanyExperience < 0.5) {
+                        const insertIncrementSQL = `
+                            INSERT INTO employee_increments 
+                            (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-                        const avgRating = parseFloat(ratingResults[0].avgRating) || 0;
-                        const flooredRating = Math.max(1, Math.floor(avgRating));
+                        db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, 0, 'Not Eligible', 0], (err3) => {
+                            if (err3) {
+                                console.error('Error inserting increment:', err3);
+                                return res.status(500).send('Employee added, but increment insertion failed');
+                            }
+                            res.send('Employee, User account, Default Permissions, and Increment details added successfully (Not Eligible for Increment)');
+                        });
+                    } else {
+                        const avgRatingSQL = `SELECT AVG(rating) AS avgRating FROM tasks WHERE employee_id = ?`;
 
-                        const performanceSQL = `
-                            SELECT performance_label, increment_percent
-                            FROM performance_levels
-                            WHERE min_rating = ?
-                            LIMIT 1`;
-
-                        db.query(performanceSQL, [flooredRating], (err3, performanceResults) => {
-                            if (err3 || performanceResults.length === 0) {
-                                console.error('Error fetching performance level:', err3);
-                                return res.status(500).send('Failed to fetch performance level');
+                        db.query(avgRatingSQL, [empId], (err2, ratingResults) => {
+                            if (err2) {
+                                console.error('Error fetching average rating:', err2);
+                                return res.status(500).send('Employee added, but failed to fetch average rating');
                             }
 
-                            const { performance_label, increment_percent } = performanceResults[0];
+                            const avgRating = parseFloat(ratingResults[0].avgRating) || 0;
+                            const flooredRating = Math.max(1, Math.floor(avgRating));
 
-                            const insertIncrementSQL = `
-                                INSERT INTO employee_increments 
-                                (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                            const performanceSQL = `
+                                SELECT performance_label, increment_percent
+                                FROM performance_levels
+                                WHERE min_rating = ?
+                                LIMIT 1`;
 
-                            db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, avgRating, performance_label, increment_percent], (err4) => {
-                                if (err4) {
-                                    console.error('Error inserting increment:', err4);
-                                    return res.status(500).send('Employee added, but increment insertion failed');
+                            db.query(performanceSQL, [flooredRating], (err3, performanceResults) => {
+                                if (err3 || performanceResults.length === 0) {
+                                    console.error('Error fetching performance level:', err3);
+                                    return res.status(500).send('Failed to fetch performance level');
                                 }
-                                res.send('Employee, User account with hashed password, and Increment details added successfully');
+
+                                const { performance_label, increment_percent } = performanceResults[0];
+
+                                const insertIncrementSQL = `
+                                    INSERT INTO employee_increments 
+                                    (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+                                db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, avgRating, performance_label, increment_percent], (err4) => {
+                                    if (err4) {
+                                        console.error('Error inserting increment:', err4);
+                                        return res.status(500).send('Employee added, but increment insertion failed');
+                                    }
+                                    res.send('Employee, User account, Default Permissions, and Increment details added successfully');
+                                });
                             });
                         });
-                    });
-                }
+                    }
+                });
             });
         });
     });
@@ -174,3 +186,74 @@ export const assignTaskToEmployees = (req, res) => {
         res.send('Task Assigned Successfully!');
     });
 };
+//Related To Permission
+export const getEmployeeWithPermission = (req, res) => {
+    const employeeId = req.params.id;
+
+    const employeeSQL = `SELECT * FROM employees WHERE id = ?`;
+    const permissionSQL = `SELECT * FROM EmployeePermission WHERE employee_id = ?`;
+
+    db.query(employeeSQL, [employeeId], (err, employeeResults) => {
+        if (err) {
+            console.error('Error fetching employee:', err);
+            return res.status(500).send('Failed to fetch employee data');
+        }
+
+        if (employeeResults.length === 0) {
+            return res.status(404).send('Employee not found');
+        }
+
+        db.query(permissionSQL, [employeeId], (err2, permissionResults) => {
+            if (err2) {
+                console.error('Error fetching permissions:', err2);
+                return res.status(500).send('Failed to fetch employee permissions');
+            }
+
+            res.json({
+                employee: employeeResults[0],
+                permissions: permissionResults[0] || null
+            });
+        });
+    });
+};
+export const updateEmployeePermission = (req, res) => {
+    const employeeId = req.params.id;
+    const { E_add, E_read, E_edit, E_delete } = req.body;
+
+    const updateSQL = `
+        UPDATE EmployeePermission
+        SET E_add = ?, E_read = ?, E_edit = ?, E_delete = ?
+        WHERE employee_id = ?`;
+
+    db.query(updateSQL, [E_add, E_read, E_edit, E_delete, employeeId], (err, result) => {
+        if (err) {
+            console.error('Error updating permissions:', err);
+            return res.status(500).send('Failed to update permissions');
+        }
+
+        res.send('Permissions updated successfully');
+    });
+};
+
+
+// Controller to fetch granted permissions of an employee
+export const getGrantedPermissions = (req, res) => {
+    const employeeId = req.params.id;
+
+    const permissionSQL = `SELECT * FROM EmployeePermission WHERE employee_id = ?`;
+
+    db.query(permissionSQL, [employeeId], (err, results) => {
+        if (err) {
+            console.error('Error fetching permissions:', err);
+            return res.status(500).send('Failed to fetch permissions');
+        }
+
+        if (results.length === 0) {
+            return res.status(404).send('Permissions not found for this employee');
+        }
+
+        const permissions = results[0];
+        res.json(permissions);
+    });
+};
+
