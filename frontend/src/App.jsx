@@ -11,6 +11,10 @@ import ViewEmployees from './pages/ViewEmployees';
 import HrPolicy from './pages/HrPolicy';
 import AssignTask from './pages/AssignTask';
 import EmployeeGrantedPermission from './pages/EmployeeGrantedPermission';
+import EmployeeRead from './pages/EmployeeRead';
+import EmployeeAdd from './pages/EmployeeAdd';
+import EmployeeEdit from './pages/EmployeeEdit';
+import EmployeeDelete from './pages/EmployeeDelete';
 const App = () => {
   return (
     <BrowserRouter>
@@ -43,6 +47,10 @@ const App = () => {
           element={<EmployeeGrantedPermission />}
         />
 
+        <Route path="/employee/read" element={<EmployeeRead />} />
+        <Route path="/employee/add" element={<EmployeeAdd/>} />
+        <Route path="/employee/edit" element={<EmployeeEdit />} />
+        <Route path="/employee/delete" element={<EmployeeDelete />} />
 
       </Routes>
 

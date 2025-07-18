@@ -34,6 +34,19 @@ const EmployeeGrantedPermission = () => {
     navigate('/employee/dashboard');
   };
 
+  const handlePermissionClick = (permissionKey) => {
+    const permissionRoutes = {
+      E_add: '/employee/add',
+      E_read: '/employee/read',
+      E_edit: '/employee/edit',
+      E_delete: '/employee/delete'
+    };
+
+    if (permissionRoutes[permissionKey]) {
+      navigate(permissionRoutes[permissionKey]);
+    }
+  };
+
   const grantedPermissions = Object.entries(permissions).filter(([key, value]) => key.startsWith('E_') && value);
 
   const buttonColors = {
@@ -54,7 +67,7 @@ const EmployeeGrantedPermission = () => {
               <button
                 key={key}
                 className={`btn btn-${buttonColors[key]} mb-2 fw-semibold w-100`}
-                disabled
+                onClick={() => handlePermissionClick(key)}
               >
                 {key.replace('E_', '')}
               </button>
