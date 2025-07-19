@@ -8,9 +8,7 @@ import AddEmployee from './AddEmployee';
 import ViewEmployees from './ViewEmployees';
 import HrPolicy from './HrPolicy';
 import AssignTask from './AssignTask';
-// import ViewSalary from './ViewSalary';
-// import RegisterTable from './RegisterTable';
-// import TaskData from './TaskData';
+import TaskManagement from './TaskManagement';  // <-- newly added
 
 const HrDashboard = () => {
   const navigate = useNavigate();
@@ -45,12 +43,8 @@ const HrDashboard = () => {
         return <AssignTask />;
       case 'hrPolicy':
         return <HrPolicy />;
-      // case 'viewSalary':
-      //   return <ViewSalary />;
-      // case 'registerTable':
-      //   return <RegisterTable />;
-      // case 'taskData':
-      //   return <TaskData />;
+      case 'taskManagement':
+        return <TaskManagement employeeId={user.id} />;
       default:
         return <HrHome user={user} />;
     }
@@ -90,6 +84,17 @@ const HrDashboard = () => {
 
         <button className="btn btn-light mt-2" onClick={() => setActiveComponent('assignTask')}>
           Assign Task
+        </button>
+
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('taskManagement')}>
+          Manage My Tasks
+        </button>
+
+        <button
+          className="btn btn-light mt-2"
+          onClick={() => navigate('/employee/granted-permissions')}
+        >
+          Granted Permissions
         </button>
 
         <button className="btn btn-danger mt-3" onClick={handleLogout}>

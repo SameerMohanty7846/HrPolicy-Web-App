@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const EmployeeAdd = () => {
-  const navigate = useNavigate();
+const AddHr = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -12,8 +10,7 @@ const EmployeeAdd = () => {
     salary: '',
     dateOfJoining: '',
     employeeType: 'Fresher',
-    experience: 0,
-    department: 'Employee'  // Default department
+    experience: 0
   });
 
   const handleChange = (e) => {
@@ -37,10 +34,11 @@ const EmployeeAdd = () => {
     e.preventDefault();
 
     try {
-      const response = await axios.post('http://localhost:2000/api/hr/insertemployee', formData);
+      // API endpoint for inserting HR
+      const response = await axios.post('http://localhost:2000/api/hr/inserthr', formData);
 
       if (response.status === 200) {
-        alert('Employee added successfully!');
+        alert('HR added successfully!');
         setFormData({
           name: '',
           email: '',
@@ -48,24 +46,19 @@ const EmployeeAdd = () => {
           salary: '',
           dateOfJoining: '',
           employeeType: 'Fresher',
-          experience: 0,
-          department: 'Employee'  // Reset department
+          experience: 0
         });
       }
     } catch (error) {
-      console.error('Error adding employee:', error);
-      alert('Failed to add employee');
+      console.error('Error adding HR:', error);
+      alert('Failed to add HR');
     }
   };
 
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   return (
-    <div className="add-employee-bg py-4 px-3" style={{ minHeight: '100vh', overflowY: 'auto' }}>
+    <div className="add-hr-bg py-4 px-3" style={{ minHeight: '100vh', overflowY: 'auto' }}>
       <div className="glass-card mx-auto p-3 rounded-4" style={{ maxWidth: '380px' }}>
-        <h5 className="text-center mb-3 text-white fw-bold" style={{ fontSize: '1.2rem' }}>Add Employee</h5>
+        <h5 className="text-center mb-3 text-white fw-bold" style={{ fontSize: '1.2rem' }}>Add HR</h5>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-2">
@@ -157,22 +150,15 @@ const EmployeeAdd = () => {
             </div>
           )}
 
-          {/* Hidden department input */}
-          <input type="hidden" name="department" value={formData.department} />
-
           <button type="submit" className="btn btn-light fw-bold w-100 rounded-3 mt-2 small">
             Submit
           </button>
         </form>
-
-        <button onClick={handleBack} className="btn btn-secondary fw-bold w-100 rounded-3 mt-3 small">
-          Back to Granted Permissions
-        </button>
       </div>
 
       <style>
         {`
-          .add-employee-bg {
+          .add-hr-bg {
             background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
           }
           .glass-card {
@@ -190,4 +176,4 @@ const EmployeeAdd = () => {
   );
 };
 
-export default EmployeeAdd;
+export default AddHr;

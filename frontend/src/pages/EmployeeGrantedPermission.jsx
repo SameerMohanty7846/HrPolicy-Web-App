@@ -14,9 +14,9 @@ const EmployeeGrantedPermission = () => {
 
       const interval = setInterval(() => {
         fetchGrantedPermissions(storedUser.id);
-      }, 10000); // Refresh every 10 seconds
+      }, 10000);
 
-      return () => clearInterval(interval); // Clear interval on unmount
+      return () => clearInterval(interval);
     }
   }, []);
 
@@ -31,7 +31,7 @@ const EmployeeGrantedPermission = () => {
   };
 
   const handleBack = () => {
-    navigate('/employee/dashboard');
+    navigate(-1);  // Go back to previous/last page
   };
 
   const handlePermissionClick = (permissionKey) => {

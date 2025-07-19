@@ -49,13 +49,14 @@ const ViewEmployees = () => {
                 <th>Date of Joining</th>
                 <th>Employee Type</th>
                 <th>Experience (Years)</th>
+                <th>Department</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {employees.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center text-white py-4">
+                  <td colSpan="10" className="text-center text-white py-4">
                     No Employees Found
                   </td>
                 </tr>
@@ -70,6 +71,7 @@ const ViewEmployees = () => {
                     <td>{new Date(employee.dateOfJoining).toISOString().slice(0, 10)}</td>
                     <td>{employee.employeeType}</td>
                     <td>{employee.experience}</td>
+                    <td>{employee.department || 'N/A'}</td>
                     <td>
                       <button
                         className="btn btn-danger btn-sm fw-semibold"
@@ -86,7 +88,6 @@ const ViewEmployees = () => {
         </div>
       </div>
 
-      {/* ✅ Styles */}
       <style>
         {`
           .register-bg {

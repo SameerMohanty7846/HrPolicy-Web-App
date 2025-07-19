@@ -10,7 +10,8 @@ const AddEmployee = () => {
     salary: '',
     dateOfJoining: '',
     employeeType: 'Fresher',
-    experience: 0
+    experience: 0,
+    department: 'Employee'  // Added default department
   });
 
   const handleChange = (e) => {
@@ -46,7 +47,8 @@ const AddEmployee = () => {
           salary: '',
           dateOfJoining: '',
           employeeType: 'Fresher',
-          experience: 0
+          experience: 0,
+          department: 'Employee'
         });
       }
     } catch (error) {
@@ -120,7 +122,6 @@ const AddEmployee = () => {
             />
           </div>
 
-          {/* Employee Type Dropdown */}
           <div className="mb-2">
             <label className="form-label text-white small">Employee Type</label>
             <select
@@ -135,7 +136,6 @@ const AddEmployee = () => {
             </select>
           </div>
 
-          {/* Years of Experience (only if Experienced) */}
           {formData.employeeType === 'Experienced' && (
             <div className="mb-2">
               <label className="form-label text-white small">Years of Experience</label>
@@ -151,13 +151,19 @@ const AddEmployee = () => {
             </div>
           )}
 
+          {/* Hidden department field */}
+          <input
+            type="hidden"
+            name="department"
+            value={formData.department}
+          />
+
           <button type="submit" className="btn btn-light fw-bold w-100 rounded-3 mt-2 small">
             Submit
           </button>
         </form>
       </div>
 
-      {/* ✅ Styles */}
       <style>
         {`
           .add-employee-bg {

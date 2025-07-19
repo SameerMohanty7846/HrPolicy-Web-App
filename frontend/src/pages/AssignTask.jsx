@@ -8,6 +8,7 @@ const AssignTask = () => {
   const [formData, setFormData] = useState({
     employee_id: '',
     employee_name: '',
+    role: '',
     task_name: '',
     assignment_date: '',
     time_required: ''
@@ -27,7 +28,8 @@ const AssignTask = () => {
     setFormData(prev => ({
       ...prev,
       employee_id: storedUser.id,
-      employee_name: storedUser.name
+      employee_name: storedUser.name,
+      role: storedUser.role  // storing role in formData
     }));
   }, [navigate]);
 
@@ -88,6 +90,17 @@ const AssignTask = () => {
               className="form-control rounded-3 border-0 small"
               value={formData.employee_name}
               name="employee_name"
+              readOnly
+            />
+          </div>
+
+          <div className="mb-2">
+            <label className="form-label text-white small">Role</label>
+            <input
+              type="text"
+              className="form-control rounded-3 border-0 small"
+              value={formData.role}
+              name="role"
               readOnly
             />
           </div>

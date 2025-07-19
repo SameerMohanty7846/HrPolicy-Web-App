@@ -4,8 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Import Components
 import AddEmployee from './AddEmployee';
+import AddHr from './AddHr';                       // ✅ Import AddHr
 import ViewEmployees from './ViewEmployees';
-import EmployeePermissionList from './EmployeePermissionList';  // Import PermissionComponent here
+import EmployeePermissionList from './EmployeePermissionList';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -28,10 +29,12 @@ const AdminDashboard = () => {
     switch (activeComponent) {
       case 'addEmployee':
         return <AddEmployee />;
+      case 'addHr':
+        return <AddHr />;                       // ✅ Add HR component rendering
       case 'viewEmployees':
         return <ViewEmployees />;
       case 'permissions':
-        return <EmployeePermissionList />;    // Render Permission List
+        return <EmployeePermissionList />;
       default:
         return (
           <div className="text-center mt-5">
@@ -64,6 +67,10 @@ const AdminDashboard = () => {
 
         <button className="btn btn-light mt-2" onClick={() => setActiveComponent('addEmployee')}>
           Add Employee
+        </button>
+
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('addHr')}>
+          Add HR
         </button>
 
         <button className="btn btn-light mt-2" onClick={() => setActiveComponent('viewEmployees')}>
