@@ -300,6 +300,8 @@ export const assignTaskToEmployees = (req, res) => {
         res.send('Task Assigned Successfully!');
     });
 };
+
+
 // Get all tasks for a specific employee
 export const getAllTasksByEmployee = (req, res) => {
     const { employeeId } = req.params;
@@ -336,7 +338,7 @@ export const pauseTask = (req, res) => {
         const { start_time, time_accumulated } = results[0];
         const now = new Date();
         const start = new Date(start_time);
-        const elapsed = now - start;
+        const elapsed = now - start; // ms
         const updatedAccumulated = (time_accumulated || 0) + elapsed;
 
         const updateSql = `
@@ -376,7 +378,7 @@ export const finishTask = (req, res) => {
 
         const { start_time, time_accumulated, time_required, task_status } = result[0];
 
-        if (task_status !== 'In Progress' && task_status !== 'Paused') {
+        if (!['In Progress', 'Paused'].includes(task_status)) {
             return res.status(400).send('Task is not in progress or paused, cannot finish');
         }
 
@@ -388,20 +390,22 @@ export const finishTask = (req, res) => {
             totalTimeMs += now - start;
         }
 
-        const hours = Math.floor(totalTimeMs / (1000 * 60 * 60));
-        const minutes = Math.floor((totalTimeMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((totalTimeMs % (1000 * 60)) / 1000);
-        const timeInHoursDecimal = totalTimeMs / (1000 * 60 * 60);
+        const totalTimeHours = parseFloat((totalTimeMs / (1000 * 60 * 60)).toFixed(2));
+        const formattedTime = formatDuration(totalTimeMs);
+
+        const diff = time_required - totalTimeHours;
+        console.log(`Task ID: ${taskId}`);
+        console.log(`Time Required: ${time_required} hrs`);
+        console.log(`Time Taken: ${totalTimeHours} hrs`);
+        console.log(`Diff: ${diff}`);
 
         let rating = 1;
-        const diff = time_required - timeInHoursDecimal;
-
         if (diff >= 0 && diff <= 0.5) rating = 5;
         else if (diff > 0.5 && diff <= 1) rating = 4;
         else if (diff < 0 && Math.abs(diff) <= 0.5) rating = 3;
         else if (diff < 0 && Math.abs(diff) > 0.5) rating = 2;
 
-        const formattedTime = `${hours}h ${minutes}m ${seconds}s`;
+        console.log(`Calculated Rating: ${rating}`);
 
         const updateSql = `
             UPDATE tasks 
@@ -411,11 +415,26 @@ export const finishTask = (req, res) => {
 
         db.query(updateSql, [formattedTime, rating, taskId], (err2) => {
             if (err2) return res.status(500).send('Finish failed');
-            res.send('Task completed');
+
+            res.json({
+                message: 'Task completed',
+                timeTaken: formattedTime,
+                timeTakenInHours: totalTimeHours,
+                timeRequired: time_required,
+                rating
+            });
         });
     });
 };
 
+// Utility: Convert milliseconds to HH:MM:SS
+const formatDuration = (ms) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}h ${minutes}m ${seconds}s`;
+};
 
 
 
