@@ -1,6 +1,7 @@
 import express from "express";
 import { 
-    login, registerAdmin 
+    login, 
+    registerAdmin 
 } from "../controller/authentication.controller.js";
 
 import { 
@@ -18,16 +19,17 @@ import {
     startTask,
     pauseTask,
     resumeTask,
-    finishTask
+    finishTask,
+    changePassword   // ✅ Import Change Password controller
 } from "../controller/hrpolicy.controller.js";
 
 const router = express.Router();
 
-// Authentication
+// === AUTHENTICATION ROUTES ===
 router.post('/login', login);
 router.post('/register/admin', registerAdmin);
 
-// HR Functionalities
+// === HR MANAGEMENT ROUTES ===
 router.post('/hr/insertemployee', registerEmployee);
 router.post('/hr/inserthr', registerHR);
 
@@ -37,16 +39,19 @@ router.get('/hr/employee-increments', getEmployeeIncrements);
 router.get('/hr/salary-report', getSalaryReport);
 router.post('/hr/assigntasks', assignTaskToEmployees);
 
-// Permissions
+// === EMPLOYEE PERMISSION ROUTES ===
 router.get('/employee/:id/permission', getEmployeeWithPermission);
 router.put('/employee/:id/permission', updateEmployeePermission);
 router.get('/employee/:id/granted-permissions', getGrantedPermissions);
 
-// Tasks APIs
+// === TASK MANAGEMENT ROUTES ===
 router.get('/tasks/:employeeId', getAllTasksByEmployee);
 router.post('/tasks/start', startTask);
 router.post('/tasks/pause', pauseTask);
 router.post('/tasks/resume', resumeTask);
 router.post('/tasks/finish', finishTask);
+
+// === ACCOUNT MANAGEMENT ROUTES ===
+router.post('/hr/change-password', changePassword);
 
 export default router;

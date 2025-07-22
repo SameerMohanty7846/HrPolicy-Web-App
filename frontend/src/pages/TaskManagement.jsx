@@ -43,8 +43,12 @@ const TaskManagement = ({ employeeId }) => {
     }
   };
 
+  // ✅ Updated renderRatingStars
   const renderRatingStars = (rating) => {
-    return rating ? '⭐'.repeat(rating) : '-';
+    if (!rating) return '-';
+    const intRating = Math.floor(rating);
+    const maxStars = 5;
+    return '⭐'.repeat(intRating) + '☆'.repeat(maxStars - intRating);
   };
 
   const renderActionButtons = (task) => {

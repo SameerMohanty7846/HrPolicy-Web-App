@@ -301,12 +301,11 @@ export const assignTaskToEmployees = (req, res) => {
     });
 };
 
-
 // Get all tasks for a specific employee
 export const getAllTasksByEmployee = (req, res) => {
     const { employeeId } = req.params;
     const query = 'SELECT * FROM tasks WHERE employee_id = ?';
-    
+
     db.query(query, [employeeId], (err, results) => {
         if (err) return res.status(500).send('Failed to fetch tasks');
         res.json(results);
@@ -368,7 +367,6 @@ export const resumeTask = (req, res) => {
     });
 };
 
-// Finish a task
 export const finishTask = (req, res) => {
     const { taskId } = req.body;
     const sql = `SELECT start_time, time_accumulated, time_required, task_status FROM tasks WHERE id = ?`;
@@ -400,11 +398,24 @@ export const finishTask = (req, res) => {
         console.log(`Diff: ${diff}`);
 
         let rating = 1;
-        if (diff >= 0 && diff <= 0.5) rating = 5;
-        else if (diff > 0.5 && diff <= 1) rating = 4;
-        else if (diff < 0 && Math.abs(diff) <= 0.5) rating = 3;
-        else if (diff < 0 && Math.abs(diff) > 0.5) rating = 2;
 
+        if (totalTimeHours < (time_required / 2)) {
+            rating = 4; // Bonus: Faster than 50% time gets 4 stars
+        } else if (diff >= 0 && diff <= 0.5) {
+            rating = 5;
+        } else if (diff > 0.5 && diff <= 1) {
+            rating = 4;
+        } else if (diff < 0 && Math.abs(diff) <= 0.5) {
+            rating = 4;
+        } else if (diff < 0 && Math.abs(diff) <= 1) {
+            rating = 3;
+        } else if (diff < 0 && Math.abs(diff) <= 2) {
+            rating = 2;
+        } else {
+            rating = 1;
+        }
+
+        rating = Math.max(1, Math.min(5, Math.floor(rating)));
         console.log(`Calculated Rating: ${rating}`);
 
         const updateSql = `
@@ -421,6 +432,7 @@ export const finishTask = (req, res) => {
                 timeTaken: formattedTime,
                 timeTakenInHours: totalTimeHours,
                 timeRequired: time_required,
+                timeDifference: diff.toFixed(2),
                 rating
             });
         });
@@ -509,4 +521,54 @@ export const getGrantedPermissions = (req, res) => {
         res.json(permissions);
     });
 };
+
+//change password controller
+export const changePassword = (req, res) => {
+    const { userId, oldPassword, newPassword } = req.body;
+
+    if (!userId || !oldPassword || !newPassword) {
+        return res.status(400).json({ message: 'All fields are required.' });
+    }
+
+    db.query('SELECT password FROM users WHERE id = ?', [userId], (err, results) => {
+        if (err) {
+            console.error('DB error while fetching user password:', err);
+            return res.status(500).json({ message: 'Internal server error.' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const storedHash = results[0].password;
+
+        bcrypt.compare(oldPassword, storedHash, (compareErr, isMatch) => {
+            if (compareErr) {
+                console.error('Password compare error:', compareErr);
+                return res.status(500).json({ message: 'Internal error.' });
+            }
+
+            if (!isMatch) {
+                return res.status(401).json({ message: 'Old password is incorrect.' });
+            }
+
+            bcrypt.hash(newPassword, 10, (hashErr, hashedNewPassword) => {
+                if (hashErr) {
+                    console.error('Password hash error:', hashErr);
+                    return res.status(500).json({ message: 'Error hashing new password.' });
+                }
+
+                db.query('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, userId], (updateErr) => {
+                    if (updateErr) {
+                        console.error('DB error while updating password:', updateErr);
+                        return res.status(500).json({ message: 'Failed to update password.' });
+                    }
+
+                    return res.status(200).json({ success: true, message: 'Password changed successfully.' });
+                });
+            });
+        });
+    });
+};
+
 

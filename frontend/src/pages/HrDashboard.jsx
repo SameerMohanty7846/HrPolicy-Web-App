@@ -8,7 +8,8 @@ import AddEmployee from './AddEmployee';
 import ViewEmployees from './ViewEmployees';
 import HrPolicy from './HrPolicy';
 import AssignTask from './AssignTask';
-import TaskManagement from './TaskManagement';  // <-- newly added
+import TaskManagement from './TaskManagement';
+import ChangePassword from './ChangePassword'; // ✅ Imported
 
 const HrDashboard = () => {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ const HrDashboard = () => {
         return <HrPolicy />;
       case 'taskManagement':
         return <TaskManagement employeeId={user.id} />;
+      case 'changePassword':
+        return <ChangePassword />;  // ✅ Case added
       default:
         return <HrHome user={user} />;
     }
@@ -95,6 +98,13 @@ const HrDashboard = () => {
           onClick={() => navigate('/employee/granted-permissions')}
         >
           Granted Permissions
+        </button>
+
+        <button
+          className="btn btn-light mt-2"
+          onClick={() => setActiveComponent('changePassword')}
+        >
+          Change Password
         </button>
 
         <button className="btn btn-danger mt-3" onClick={handleLogout}>

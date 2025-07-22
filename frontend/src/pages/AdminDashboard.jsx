@@ -4,9 +4,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Import Components
 import AddEmployee from './AddEmployee';
-import AddHr from './AddHr';                       // ✅ Import AddHr
+import AddHr from './AddHr';
 import ViewEmployees from './ViewEmployees';
 import EmployeePermissionList from './EmployeePermissionList';
+import ChangePassword from './ChangePassword';   // ✅ Import ChangePassword
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -30,11 +31,13 @@ const AdminDashboard = () => {
       case 'addEmployee':
         return <AddEmployee />;
       case 'addHr':
-        return <AddHr />;                       // ✅ Add HR component rendering
+        return <AddHr />;
       case 'viewEmployees':
         return <ViewEmployees />;
       case 'permissions':
         return <EmployeePermissionList />;
+      case 'changePassword':
+        return <ChangePassword />;            // ✅ Render ChangePassword
       default:
         return (
           <div className="text-center mt-5">
@@ -79,6 +82,10 @@ const AdminDashboard = () => {
 
         <button className="btn btn-light mt-2" onClick={() => setActiveComponent('permissions')}>
           Permissions
+        </button>
+
+        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('changePassword')}>
+          Change Password
         </button>
 
         <button className="btn btn-danger mt-3" onClick={handleLogout}>

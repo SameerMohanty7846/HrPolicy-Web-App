@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Login = () => {
@@ -75,6 +75,12 @@ const Login = () => {
           <button type="submit" className="btn btn-light fw-bold w-100 rounded-3">
             Login
           </button>
+
+          <div className="text-center mt-3">
+            <Link to="/forgot-password" className="text-white text-decoration-underline">
+              Forgot Password?
+            </Link>
+          </div>
         </form>
       </div>
 

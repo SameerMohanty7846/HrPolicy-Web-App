@@ -35,10 +35,10 @@ const ViewEmployees = () => {
 
   return (
     <div className="register-bg d-flex align-items-center justify-content-center min-vh-100 py-4 px-3">
-      <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '1200px' }}>
+      <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '1000px' }}>
         <h4 className="text-center mb-4 text-white fw-bold">Registered Employees</h4>
         <div className="table-responsive">
-          <table className="table table-hover table-bordered mb-0">
+          <table className="table table-hover table-bordered mb-0 small-table">
             <thead className="table-light">
               <tr className="text-center align-middle">
                 <th>#</th>
@@ -47,8 +47,8 @@ const ViewEmployees = () => {
                 <th>Phone</th>
                 <th>Salary</th>
                 <th>Date of Joining</th>
-                <th>Employee Type</th>
-                <th>Experience (Years)</th>
+                <th>Type</th>
+                <th>Experience</th>
                 <th>Department</th>
                 <th>Action</th>
               </tr>
@@ -99,19 +99,18 @@ const ViewEmployees = () => {
             box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
             border: 1px solid rgba(255, 255, 255, 0.2);
           }
-          .table th, .table td {
-            padding: 0.85rem 0.75rem;
-            vertical-align: middle;
-            font-size: 0.95rem;
+          .small-table th, .small-table td {
+            padding: 0.5rem 0.4rem;
+            font-size: 0.8rem;
           }
-          .table thead th {
+          .small-table thead th {
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 0.9rem;
           }
           .btn-danger {
             border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 0.9rem;
+            padding: 4px 8px;
+            font-size: 0.8rem;
           }
         `}
       </style>
