@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -7,11 +7,12 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(new Array(6).fill(''));
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [serverMessage, setServerMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const inputsRef = useRef([]);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -36,8 +37,13 @@ const ForgotPassword = () => {
     setServerMessage('');
     setErrorMessage('');
 
+    const otpValue = otp.join('');
+
     try {
-      const response = await axios.post('http://localhost:2000/api/auth/verify-otp', { email, otp });
+      const response = await axios.post('http://localhost:2000/api/auth/verify-otp', {
+        email,
+        otp: otpValue,
+      });
       setServerMessage(response.data.message);
       setStep(3);
     } catch (err) {
@@ -73,6 +79,19 @@ const ForgotPassword = () => {
     }
   };
 
+  const handleOtpChange = (element, index) => {
+    const value = element.value.replace(/\D/, '');
+    if (!value) return;
+
+    const updatedOtp = [...otp];
+    updatedOtp[index] = value;
+    setOtp(updatedOtp);
+
+    if (index < inputsRef.current.length - 1 && value) {
+      inputsRef.current[index + 1].focus();
+    }
+  };
+
   return (
     <div className="login-bg d-flex align-items-center justify-content-center vh-100">
       <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '400px' }}>
@@ -103,17 +122,23 @@ const ForgotPassword = () => {
 
         {step === 2 && (
           <form onSubmit={handleVerifyOtp}>
-            <div className="mb-3">
+            <div className="mb-3 text-center">
               <label className="form-label text-white">Enter OTP</label>
-              <input
-                type="text"
-                className="form-control rounded-3"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-              />
+              <div className="d-flex justify-content-center gap-2 otp-boxes">
+                {otp.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    maxLength="1"
+                    className="otp-input"
+                    value={digit}
+                    onChange={(e) => handleOtpChange(e.target, idx)}
+                    ref={(el) => (inputsRef.current[idx] = el)}
+                  />
+                ))}
+              </div>
             </div>
-            <button type="submit" className="btn btn-light fw-bold w-100">Verify OTP</button>
+            <button type="submit" className="btn btn-light fw-bold w-100 mt-3">Verify OTP</button>
           </form>
         )}
 
@@ -156,35 +181,53 @@ const ForgotPassword = () => {
         )}
       </div>
 
-      <style>
-        {`
-          .login-bg {
-            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-          }
+      <style>{`
+        .login-bg {
+          background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+        }
 
-          .glass-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-          }
+        .glass-card {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(15px);
+          box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
 
-          .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-          }
+        .fade-in {
+          animation: fadeIn 0.5s ease-in-out;
+        }
 
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-5px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
           }
-        `}
-      </style>
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .otp-boxes .otp-input {
+          width: 45px;
+          height: 50px;
+          font-size: 1.5rem;
+          text-align: center;
+          border-radius: 10px;
+          border: none;
+          background-color: rgba(255,255,255,0.2);
+          color: white;
+          font-weight: bold;
+          outline: none;
+          box-shadow: 0 0 5px rgba(255,255,255,0.3);
+          transition: 0.2s ease-in-out;
+        }
+
+        .otp-boxes .otp-input:focus {
+          background-color: rgba(255,255,255,0.3);
+          box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+      `}</style>
     </div>
   );
 };

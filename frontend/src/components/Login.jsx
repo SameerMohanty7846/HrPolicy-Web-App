@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [isMounted, setIsMounted] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Trigger animation after component mounts
+    setIsMounted(true);
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -43,7 +49,7 @@ const Login = () => {
 
   return (
     <div className="login-bg d-flex align-items-center justify-content-center vh-100">
-      <div className="glass-card p-5 rounded-4">
+      <div className={`glass-card p-5 rounded-4 ${isMounted ? 'fade-in' : ''}`}>
         <h2 className="text-center mb-4 text-white fw-bold">Sign In</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -88,17 +94,67 @@ const Login = () => {
         {`
           body {
             overflow: hidden;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
           }
+
           .login-bg {
-            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364, #1f4037);
+            background-size: 300% 300%;
+            animation: bgSlide 18s ease infinite;
           }
+
+          @keyframes bgSlide {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+
           .glass-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.6s ease-out;
+          }
+
+          .glass-card.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+          }
+
+          .form-control {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: white;
+          }
+
+          .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+            color: white;
+          }
+
+          .btn-light {
+            background: #fff;
+            color: #000;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+          }
+
+          .btn-light:hover {
+            background-color: #eaeaea;
+          }
+
+          .text-decoration-underline:hover {
+            opacity: 0.8;
           }
         `}
       </style>

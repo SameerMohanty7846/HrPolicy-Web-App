@@ -7,7 +7,7 @@ import AddEmployee from './AddEmployee';
 import AddHr from './AddHr';
 import ViewEmployees from './ViewEmployees';
 import EmployeePermissionList from './EmployeePermissionList';
-import ChangePassword from './ChangePassword';   // ✅ Import ChangePassword
+import ChangePassword from './ChangePassword';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ const AdminDashboard = () => {
       case 'permissions':
         return <EmployeePermissionList />;
       case 'changePassword':
-        return <ChangePassword />;            // ✅ Render ChangePassword
+        return <ChangePassword />;
       default:
         return (
           <div className="text-center mt-5">
@@ -48,19 +48,21 @@ const AdminDashboard = () => {
     }
   };
 
+  const getInitial = (name) => (name ? name.charAt(0).toUpperCase() : '');
+
   return (
     <div className="layout-bg d-flex" style={{ height: '100vh' }}>
       <div
         className="glass-sidebar d-flex flex-column text-white p-3"
-        style={{ width: '220px', overflowY: 'auto', position: 'fixed', height: '100vh' }}
+        style={{ width: '220px', position: 'fixed', height: '100vh', overflowY: 'auto' }}
       >
         {user && (
           <div className="text-center mb-4">
             <div
-              className="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center border border-white"
+              className="rounded-circle bg-dark bg-opacity-50 d-inline-flex align-items-center justify-content-center border border-white"
               style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}
             >
-              {user.name?.charAt(0).toUpperCase()}
+              {getInitial(user.name)}
             </div>
             <div className="mt-2 fw-bold">{user.name}</div>
             <div style={{ fontSize: '0.85rem' }}>{user.email}</div>
@@ -68,27 +70,26 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('addEmployee')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('addEmployee')}>
           Add Employee
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('addHr')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('addHr')}>
           Add HR
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('viewEmployees')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('viewEmployees')}>
           View Employees
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('permissions')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('permissions')}>
           Permissions
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('changePassword')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>
           Change Password
         </button>
 
-        <button className="btn btn-danger mt-3" onClick={handleLogout}>
+        <button
+          className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn"
+          onClick={handleLogout}
+        >
           Logout
         </button>
       </div>
@@ -100,20 +101,46 @@ const AdminDashboard = () => {
         {renderContent()}
       </div>
 
-      <style>
-        {`
-          .layout-bg {
-            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-            width: 100%;
-          }
-          .glass-sidebar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-          }
-        `}
-      </style>
+      <style>{`
+        .layout-bg {
+          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364, #1f4037);
+          width: 100%;
+        }
+
+        .glass-sidebar {
+          background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+          backdrop-filter: blur(14px);
+          box-shadow: 0 0 25px rgba(255, 255, 255, 0.05);
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-btn {
+          background: linear-gradient(to right, #4b6cb7, #182848);
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          margin-top: 10px;
+          border-radius: 12px;
+          font-weight: 600;
+          text-align: left;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-btn:hover {
+          background: linear-gradient(to right, #43cea2, #185a9d);
+          transform: translateX(4px);
+          box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+
+        .logout-btn {
+          transition: transform 0.2s ease;
+        }
+
+        .logout-btn:hover {
+          transform: scale(1.05);
+        }
+      `}</style>
     </div>
   );
 };

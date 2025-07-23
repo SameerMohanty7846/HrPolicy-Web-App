@@ -9,7 +9,8 @@ import ViewEmployees from './ViewEmployees';
 import HrPolicy from './HrPolicy';
 import AssignTask from './AssignTask';
 import TaskManagement from './TaskManagement';
-import ChangePassword from './ChangePassword'; // ✅ Imported
+import ChangePassword from './ChangePassword';
+import EmployeeGrantedPermission from './EmployeeGrantedPermission';
 
 const HrDashboard = () => {
   const navigate = useNavigate();
@@ -47,7 +48,9 @@ const HrDashboard = () => {
       case 'taskManagement':
         return <TaskManagement employeeId={user.id} />;
       case 'changePassword':
-        return <ChangePassword />;  // ✅ Case added
+        return <ChangePassword />;
+      case 'grantedPermissions':
+        return <EmployeeGrantedPermission employeeId={user.id} />;
       default:
         return <HrHome user={user} />;
     }
@@ -57,12 +60,12 @@ const HrDashboard = () => {
     <div className="layout-bg d-flex" style={{ height: '100vh' }}>
       <div
         className="glass-sidebar d-flex flex-column text-white p-3"
-        style={{ width: '220px', overflowY: 'auto', position: 'fixed', height: '100vh' }}
+        style={{ width: '220px', position: 'fixed', height: '100vh' }}
       >
         {user && (
           <div className="text-center mb-4">
             <div
-              className="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center border border-white"
+              className="rounded-circle bg-dark bg-opacity-50 d-inline-flex align-items-center justify-content-center border border-white"
               style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}
             >
               {getInitial(user.name)}
@@ -73,41 +76,28 @@ const HrDashboard = () => {
           </div>
         )}
 
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('addEmployee')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('addEmployee')}>
           Add Employee
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('viewEmployees')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('viewEmployees')}>
           View Employees
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('hrPolicy')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('hrPolicy')}>
           HR Policy
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('assignTask')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>
           Assign Task
         </button>
-
-        <button className="btn btn-light mt-2" onClick={() => setActiveComponent('taskManagement')}>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>
           Manage My Tasks
         </button>
-
-        <button
-          className="btn btn-light mt-2"
-          onClick={() => navigate('/employee/granted-permissions')}
-        >
+        <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>
           Granted Permissions
         </button>
-
-        <button
-          className="btn btn-light mt-2"
-          onClick={() => setActiveComponent('changePassword')}
-        >
+        <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>
           Change Password
         </button>
-
-        <button className="btn btn-danger mt-3" onClick={handleLogout}>
+        <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>
           Logout
         </button>
       </div>
@@ -119,20 +109,52 @@ const HrDashboard = () => {
         {renderContent()}
       </div>
 
-      <style>
-        {`
-          .layout-bg {
-            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-            width: 100%;
-          }
-          .glass-sidebar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-          }
-        `}
-      </style>
+      <style>{`
+        .layout-bg {
+          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364, #1f4037);
+          width: 100%;
+        }
+
+        .glass-sidebar {
+          background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+          backdrop-filter: blur(14px);
+          box-shadow: 0 0 25px rgba(255, 255, 255, 0.05);
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+          overflow-y: auto;
+          scrollbar-width: none; /* Firefox */
+        }
+
+        .glass-sidebar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .sidebar-btn {
+          background: linear-gradient(to right, #4b6cb7, #182848);
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          margin-top: 10px;
+          border-radius: 12px;
+          font-weight: 600;
+          text-align: left;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-btn:hover {
+          background: linear-gradient(to right, #43cea2, #185a9d);
+          transform: translateX(4px);
+          box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        }
+
+        .logout-btn {
+          transition: transform 0.2s ease;
+        }
+
+        .logout-btn:hover {
+          transform: scale(1.05);
+        }
+      `}</style>
     </div>
   );
 };

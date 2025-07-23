@@ -31,7 +31,7 @@ const EmployeeGrantedPermission = () => {
   };
 
   const handleBack = () => {
-    navigate(-1);  // Go back to previous/last page
+    navigate(-1);
   };
 
   const handlePermissionClick = (permissionKey) => {
@@ -47,7 +47,9 @@ const EmployeeGrantedPermission = () => {
     }
   };
 
-  const grantedPermissions = Object.entries(permissions).filter(([key, value]) => key.startsWith('E_') && value);
+  const grantedPermissions = Object.entries(permissions).filter(
+    ([key, value]) => key.startsWith('E_') && value
+  );
 
   const buttonColors = {
     E_add: 'primary',
@@ -66,7 +68,7 @@ const EmployeeGrantedPermission = () => {
             grantedPermissions.map(([key]) => (
               <button
                 key={key}
-                className={`btn btn-${buttonColors[key]} mb-2 fw-semibold w-100`}
+                className={`btn btn-${buttonColors[key]} mb-3 fw-semibold w-100 permission-btn text-uppercase`}
                 onClick={() => handlePermissionClick(key)}
               >
                 {key.replace('E_', '')}
@@ -77,7 +79,7 @@ const EmployeeGrantedPermission = () => {
           )}
         </div>
 
-        <button onClick={handleBack} className="btn btn-light mt-3 w-100 fw-bold">
+        <button onClick={handleBack} className="btn btn-light mt-3 w-100 fw-bold permission-btn text-uppercase">
           Back to Dashboard
         </button>
       </div>
@@ -87,11 +89,24 @@ const EmployeeGrantedPermission = () => {
           .permission-bg {
             background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
           }
+
           .glass-card {
             background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(12px);
             box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
             border: 1px solid rgba(255, 255, 255, 0.18);
+          }
+
+          .permission-btn {
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+            transition: all 0.3s ease-in-out;
+          }
+
+          .permission-btn:hover {
+            transform: scale(1.03);
+            opacity: 0.9;
           }
         `}
       </style>
