@@ -9,8 +9,9 @@ const ChangePassword = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const user = JSON.parse(sessionStorage.getItem('user'));
     const navigate = useNavigate();
+
+    const user = JSON.parse(sessionStorage.getItem('user'));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,15 +29,14 @@ const ChangePassword = () => {
         }
 
         try {
-            const response = await axios.post('http://localhost:2000/api/hr/change-password', {
+            const response = await axios.post('http://localhost:2000/api/auth/change-password', {
                 userId: user.id,
                 oldPassword,
                 newPassword
             });
 
             if (response.data.success) {
-                setSuccess(response.data.message);
-                // Clear session and redirect after short delay
+                setSuccess(response.data.message || 'Password changed successfully.');
                 setTimeout(() => {
                     sessionStorage.clear();
                     navigate('/');

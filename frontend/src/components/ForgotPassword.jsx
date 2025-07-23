@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -10,41 +11,79 @@ const ForgotPassword = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [serverMessage, setServerMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
-    setServerMessage('Dummy OTP 123456 sent to your email');
-    setStep(2);
-  };
+    setServerMessage('');
+    setErrorMessage('');
 
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    if (otp === '123456') {
-      setServerMessage('OTP verified successfully');
-      setStep(3);
-    } else {
-      alert('Invalid OTP. Please enter 123456.');
+    try {
+      const response = await axios.post('http://localhost:2000/api/auth/request-otp', { email });
+      setServerMessage(response.data.message);
+      setStep(2);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setErrorMessage('User does not exist.');
+      } else {
+        setErrorMessage('Failed to send OTP. Please try again.');
+      }
     }
   };
 
-  const handleResetPassword = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    setServerMessage('');
+    setErrorMessage('');
+
+    try {
+      const response = await axios.post('http://localhost:2000/api/auth/verify-otp', { email, otp });
+      setServerMessage(response.data.message);
+      setStep(3);
+    } catch (err) {
+      if (err.response?.status === 400) {
+        setErrorMessage('Invalid or expired OTP.');
+      } else {
+        setErrorMessage('OTP verification failed.');
+      }
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setServerMessage('');
+    setErrorMessage('');
+
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match. Please try again.');
+      setErrorMessage('Passwords do not match.');
       return;
     }
-    alert(`Password for ${email} has been reset successfully.`);
-    setServerMessage('Password reset successful');
 
-    // Redirect to home '/'
-    navigate('/');
+    try {
+      await axios.post('http://localhost:2000/api/auth/change-password-with-otp', {
+        email,
+        newPassword,
+      });
+
+      setServerMessage('Password reset successful!');
+      setTimeout(() => navigate('/'), 2000);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Password reset failed. Please try again.');
+    }
   };
 
   return (
     <div className="login-bg d-flex align-items-center justify-content-center vh-100">
       <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '400px' }}>
         <h2 className="text-center text-white mb-4">Forgot Password</h2>
-        {serverMessage && <p className="text-success text-center">{serverMessage}</p>}
+
+        {serverMessage && (
+          <div className="alert alert-success fade-in text-center py-2">{serverMessage}</div>
+        )}
+        {errorMessage && (
+          <div className="alert alert-danger fade-in text-center py-2">{errorMessage}</div>
+        )}
 
         {step === 1 && (
           <form onSubmit={handleSendOtp}>
@@ -122,11 +161,27 @@ const ForgotPassword = () => {
           .login-bg {
             background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
           }
+
           .glass-card {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
             box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
             border: 1px solid rgba(255, 255, 255, 0.18);
+          }
+
+          .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+          }
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-5px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
         `}
       </style>

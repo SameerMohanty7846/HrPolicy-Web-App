@@ -1,11 +1,12 @@
 import db from "../config/db.js";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { sendEmail } from '../services/mailService.js';
 
 const SECRET_KEY = 'your_secret_key';
 const SALT_ROUNDS = 10;
 
-//all the login in single page
+// Login (common for all roles)
 export const login = (req, res) => {
     const { email, password } = req.body;
 
@@ -45,7 +46,7 @@ export const login = (req, res) => {
     });
 };
 
-// Register New Employee
+// Register Employee
 export const registerEmployee = (req, res) => {
     const { name, email, password } = req.body;
 
@@ -70,7 +71,7 @@ export const registerEmployee = (req, res) => {
     });
 };
 
-// Register New Admin
+// Register Admin
 export const registerAdmin = (req, res) => {
     const { name, email, password } = req.body;
 
@@ -94,7 +95,8 @@ export const registerAdmin = (req, res) => {
         });
     });
 };
-// Register New HR
+
+// Register HR
 export const registerHR = (req, res) => {
     const { name, email, password } = req.body;
 
@@ -118,3 +120,112 @@ export const registerHR = (req, res) => {
         });
     });
 };
+
+// Request OTP
+export const requestOtp = (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const userCheckQuery = 'SELECT * FROM users WHERE email = ?';
+    db.query(userCheckQuery, [email], (err, results) => {
+        if (err) {
+            console.error('Error verifying email:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Email not found' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        const upsertQuery = `
+            INSERT INTO user_otps (email, otp, expires_at)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE otp = ?, expires_at = ?
+        `;
+
+        db.query(upsertQuery, [email, otp, expiresAt, otp, expiresAt], async (err) => {
+            if (err) {
+                console.error('Error saving OTP:', err);
+                return res.status(500).json({ message: 'Failed to generate OTP' });
+            }
+
+            try {
+                await sendEmail(email, 'Your OTP Code', `Your OTP is: ${otp}`);
+                return res.status(200).json({ message: 'OTP sent successfully' });
+            } catch (emailErr) {
+                console.error('Error sending OTP email:', emailErr);
+                return res.status(500).json({ message: 'Failed to send OTP email' });
+            }
+        });
+    });
+};
+
+// Verify OTP
+export const verifyOtp = (req, res) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    const query = 'SELECT * FROM user_otps WHERE email = ? AND otp = ?';
+    db.query(query, [email, otp], (err, results) => {
+        if (err) {
+            console.error('Error verifying OTP:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        if (results.length === 0 || new Date(results[0].expires_at) < new Date()) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        return res.status(200).json({ message: 'OTP verified successfully' });
+    });
+};
+
+export const changePasswordWithOtp = (req, res) => {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+        return res.status(400).json({ message: 'Email and new password are required' });
+    }
+
+    // Check if user exists by email
+    const findUserQuery = 'SELECT * FROM users WHERE email = ?';
+    db.query(findUserQuery, [email], (err, results) => {
+        if (err) {
+            console.error('Database error while looking up user:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'User with this email does not exist' });
+        }
+
+        // Hash the new password
+        bcrypt.hash(newPassword, SALT_ROUNDS, (err, hashedPassword) => {
+            if (err) {
+                console.error('Error hashing new password:', err);
+                return res.status(500).json({ message: 'Failed to process password' });
+            }
+
+            // Update the password
+            const updatePasswordQuery = 'UPDATE users SET password = ? WHERE email = ?';
+            db.query(updatePasswordQuery, [hashedPassword, email], (err) => {
+                if (err) {
+                    console.error('Error updating password:', err);
+                    return res.status(500).json({ message: 'Failed to update password' });
+                }
+
+                return res.status(200).json({ message: 'Password updated successfully' });
+            });
+        });
+    });
+};
+
