@@ -16,14 +16,16 @@ const transporter = nodemailer.createTransport({
  * Sends email using Gmail
  * @param {string} to
  * @param {string} subject
- * @param {string} text
+ * @param {string} html
+ * @param {Array} attachments (optional)
  */
-export const sendEmail = async (to, subject, text) => {
+export const sendEmail = async (to, subject, html, attachments = []) => {
   const mailOptions = {
     from: `"Hr Policy App" <${process.env.EMAIL_USER}>`,
     to,
     subject,
-    text,
+    html, // now using HTML instead of text
+    attachments, // support for image or file attachments
   };
 
   try {

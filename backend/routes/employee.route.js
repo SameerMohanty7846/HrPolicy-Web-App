@@ -29,6 +29,12 @@ import {
     finishTask
 } from "../controller/hrpolicy.controller.js";
 
+// 📊 ANALYTICS CONTROLLER
+import {
+    getDailyRatings,
+    getMonthlyRatings
+} from "../controller/analytics.controller.js"; // ✅ Removed getWeeklyRatings
+
 const router = express.Router();
 
 // === AUTH ROUTES ===
@@ -62,5 +68,9 @@ router.post('/tasks/start', startTask);
 router.post('/tasks/pause', pauseTask);
 router.post('/tasks/resume', resumeTask);
 router.post('/tasks/finish', finishTask);
+
+// === ANALYTICS (only Daily and Monthly as requested) ===
+router.get('/ratings/daily/:employeeId', getDailyRatings);
+router.get('/ratings/monthly/:employeeId', getMonthlyRatings); // ✅ Weekly route removed
 
 export default router;

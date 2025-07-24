@@ -1,0 +1,141 @@
+-- ========================================
+-- TASKS TABLE
+-- ========================================
+CREATE TABLE tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    employee_name VARCHAR(255),
+    department VARCHAR(100),
+    task_name VARCHAR(255) NOT NULL,
+    assignment_date DATE,
+    task_status VARCHAR(50) DEFAULT 'Pending',
+    time_required DECIMAL(5,2) NOT NULL, -- expected time in hours
+    time_taken VARCHAR(50),
+    rating INT,
+    start_time DATETIME,
+    pause_time DATETIME,
+    resume_time DATETIME,
+    end_time DATETIME,
+    time_accumulated BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- ========================================
+-- PERFORMANCE LEVELS TABLE
+-- ========================================
+CREATE TABLE performance_levels (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    min_rating INT NOT NULL,
+    performance_label VARCHAR(100) NOT NULL,
+    increment_percent INT NOT NULL
+);
+
+INSERT INTO performance_levels (min_rating, performance_label, increment_percent) VALUES
+(5, 'Outstanding Performer', 25),
+(4, 'Excellent Performer', 20),
+(3, 'Good Performer', 15),
+(2, 'Average Performer', 10),
+(1, 'Poor Performer', 5);
+
+-- ========================================
+-- USERS TABLE
+-- ========================================
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NULL,
+    name VARCHAR(100),
+    email VARCHAR(100) UNIQUE,
+    password VARCHAR(255),
+    role VARCHAR(20) NOT NULL,
+    department VARCHAR(50) NOT NULL,
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+);
+
+INSERT INTO users (employee_id, name, email, password, role, department) VALUES
+(1, 'Admin', 'admin@example.com', '$2b$10$6LBoKR1mdtRO.4IVaNPU2.uayCnHsu.1APPzUx051Yu9Nw13CuAWi', 'admin', 'Admin'),
+(2, 'HR User', 'hr@example.com', '$2b$10$6LBoKR1mdtRO.4IVaNPU2.uayCnHsu.1APPzUx051Yu9Nw13CuAWi', 'hr', 'HR'),
+(3, 'Employee User', 'employee@example.com', '$2b$10$6LBoKR1mdtRO.4IVaNPU2.uayCnHsu.1APPzUx051Yu9Nw13CuAWi', 'employee', 'Employee');
+
+-- ========================================
+-- ACCESS INFO TABLE
+-- ========================================
+CREATE TABLE AccessInfo (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    role VARCHAR(50) NOT NULL,
+    operation VARCHAR(50) NOT NULL,
+    operation_id VARCHAR(50) NOT NULL
+);
+
+INSERT INTO AccessInfo (role, operation, operation_id) VALUES
+('Employee', 'add', 'E-add'),
+('Employee', 'read', 'E-read'),
+('Employee', 'edit', 'E-edit'),
+('Employee', 'delete', 'E-delete'),
+
+('HR', 'add', 'HR-add'),
+('HR', 'read', 'HR-read'),
+('HR', 'edit', 'HR-edit'),
+('HR', 'delete', 'HR-delete'),
+
+('Admin', 'add', 'A-add'),
+('Admin', 'read', 'A-read'),
+('Admin', 'edit', 'A-edit'),
+('Admin', 'delete', 'A-delete');
+
+-- ========================================
+-- EMPLOYEE PERMISSION TABLE (NO DEPARTMENT HERE)
+-- ========================================
+CREATE TABLE EmployeePermission (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    employee_id INT NOT NULL,
+    E_add BOOLEAN DEFAULT FALSE,
+    E_read BOOLEAN DEFAULT FALSE,
+    E_edit BOOLEAN DEFAULT FALSE,
+    E_delete BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+);
+
+-- USER OTP RELATED QUERIES
+-- ==============================
+DROP TABLE IF EXISTS user_otps;
+
+CREATE TABLE user_otps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    otp VARCHAR(10) NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL
+);
+
+
+
+-- ========================================
+-- VALIDATION QUERIES
+-- ========================================
+SHOW TABLES;
+
+SELECT * FROM employees;
+SELECT * FROM employee_increments;
+SELECT * FROM tasks;
+SELECT * FROM performance_levels;
+SELECT * FROM users;
+SELECT * FROM AccessInfo;
+SELECT * FROM EmployeePermission;
+SELECT * FROM user_otps;
+
+
+-- AVERAGE RATING
+SELECT employee_name, FLOOR(AVG(rating)) AS average_rating
+FROM tasks
+GROUP BY employee_name;
+
+-- ========================================
+-- DROP TABLES IF NEEDED
+-- ========================================
+DROP TABLE IF EXISTS EmployeePermission;
+DROP TABLE IF EXISTS AccessInfo;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS performance_levels;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS employee_increments;
+DROP TABLE IF EXISTS employees;
