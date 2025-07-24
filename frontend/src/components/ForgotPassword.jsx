@@ -116,7 +116,7 @@ const ForgotPassword = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn btn-light fw-bold w-100">Send OTP</button>
+            <button type="submit" className="themed-btn w-100">Send OTP</button>
           </form>
         )}
 
@@ -138,7 +138,7 @@ const ForgotPassword = () => {
                 ))}
               </div>
             </div>
-            <button type="submit" className="btn btn-light fw-bold w-100 mt-3">Verify OTP</button>
+            <button type="submit" className="themed-btn w-100 mt-3">Verify OTP</button>
           </form>
         )}
 
@@ -176,7 +176,7 @@ const ForgotPassword = () => {
               />
             </div>
 
-            <button type="submit" className="btn btn-light fw-bold w-100">Reset Password</button>
+            <button type="submit" className="themed-btn w-100">Reset Password</button>
           </form>
         )}
       </div>
@@ -187,25 +187,28 @@ const ForgotPassword = () => {
         }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(15px);
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(18px);
           box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        .fade-in {
-          animation: fadeIn 0.5s ease-in-out;
+        .themed-btn {
+          background: linear-gradient(to right, #4b6cb7, #182848);
+          color: white;
+          border: none;
+          padding: 12px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 16px;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-5px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .themed-btn:hover {
+          background: linear-gradient(to right, #43cea2, #185a9d);
+          transform: scale(1.02);
+          box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
         }
 
         .otp-boxes .otp-input {
@@ -226,6 +229,21 @@ const ForgotPassword = () => {
         .otp-boxes .otp-input:focus {
           background-color: rgba(255,255,255,0.3);
           box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .fade-in {
+          animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>

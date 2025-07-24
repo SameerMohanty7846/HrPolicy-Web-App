@@ -34,9 +34,9 @@ const HrPolicy = () => {
       <div className="glass-card p-4 rounded-4 w-100 mb-5" style={{ maxWidth: '1100px' }}>
         <h3 className="text-center mb-4 text-white fw-bold">HR Policy - Employee Increments</h3>
         <div className="table-responsive">
-          <table className="table table-hover table-bordered rounded-3 overflow-hidden">
-            <thead className="table-light">
-              <tr className="text-center">
+          <table className="table table-hover table-bordered compact-table">
+            <thead className="table-light text-center">
+              <tr>
                 <th>#</th>
                 <th>Emp ID</th>
                 <th>Name</th>
@@ -48,9 +48,9 @@ const HrPolicy = () => {
                 <th>Increment %</th>
               </tr>
             </thead>
-            <tbody className="table-group-divider">
+            <tbody className="text-center">
               {increments.map((inc, index) => (
-                <tr key={inc.id} className="text-center">
+                <tr key={inc.id}>
                   <td>{index + 1}</td>
                   <td>{inc.emp_id}</td>
                   <td>{inc.emp_name}</td>
@@ -70,9 +70,9 @@ const HrPolicy = () => {
       <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '900px' }}>
         <h4 className="mb-4 text-center text-white fw-bold">View Salary Report</h4>
         <div className="table-responsive">
-          <table className="table table-hover table-bordered rounded-3 overflow-hidden">
-            <thead className="table-light">
-              <tr className="text-center">
+          <table className="table table-hover table-bordered compact-table">
+            <thead className="table-light text-center">
+              <tr>
                 <th>#</th>
                 <th>Name</th>
                 <th>Initial Salary</th>
@@ -80,14 +80,14 @@ const HrPolicy = () => {
                 <th>New Salary</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-center">
               {salaryReport.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="text-center text-white">No Salary Data Found</td>
                 </tr>
               ) : (
                 salaryReport.map((item, index) => (
-                  <tr key={index} className="text-center">
+                  <tr key={index}>
                     <td>{index + 1}</td>
                     <td>{item.name}</td>
                     <td>{item.initialSalary}</td>
@@ -101,7 +101,7 @@ const HrPolicy = () => {
         </div>
       </div>
 
-      {/* ✅ Glassmorphism & Background Styles */}
+      {/* 🔧 Styles: Compact Layout + Glass Effect */}
       <style>
         {`
           .hr-policy-bg {
@@ -113,8 +113,17 @@ const HrPolicy = () => {
             box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
             border: 1px solid rgba(255, 255, 255, 0.2);
           }
-          .table thead th {
-            font-weight: 600;
+          .compact-table th,
+          .compact-table td {
+            padding: 4px 6px !important;
+            font-size: 0.75rem !important;
+            vertical-align: middle;
+          }
+          .table-hover tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+          }
+          .table-bordered th, .table-bordered td {
+            border-color: rgba(255, 255, 255, 0.2);
           }
         `}
       </style>

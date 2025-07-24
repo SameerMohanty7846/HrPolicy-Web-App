@@ -9,7 +9,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Trigger animation after component mounts
     setIsMounted(true);
   }, []);
 
@@ -78,7 +77,7 @@ const Login = () => {
               required
             />
           </div>
-          <button type="submit" className="btn btn-light fw-bold w-100 rounded-3">
+          <button type="submit" className="login-btn w-100 fw-semibold">
             Login
           </button>
 
@@ -111,9 +110,9 @@ const Login = () => {
           }
 
           .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(16px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
             border: 1px solid rgba(255, 255, 255, 0.15);
             width: 100%;
             max-width: 420px;
@@ -142,19 +141,25 @@ const Login = () => {
             color: white;
           }
 
-          .btn-light {
-            background: #fff;
-            color: #000;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
+          .login-btn {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
           }
 
-          .btn-light:hover {
-            background-color: #eaeaea;
+          .login-btn:hover {
+            background: linear-gradient(to right, #43cea2, #185a9d);
+            transform: scale(1.02);
+            box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
           }
 
           .text-decoration-underline:hover {
-            opacity: 0.8;
+            opacity: 0.85;
           }
         `}
       </style>

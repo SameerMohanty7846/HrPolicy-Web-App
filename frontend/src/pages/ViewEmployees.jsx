@@ -4,6 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ViewEmployees = () => {
   const [employees, setEmployees] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const employeesPerPage = 5;
 
   useEffect(() => {
     fetchEmployees();
@@ -33,10 +36,37 @@ const ViewEmployees = () => {
     }
   };
 
+  // 🔍 Filter before pagination
+  const filteredEmployees = employees.filter((emp) =>
+    Object.values(emp).some(val =>
+      String(val).toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  // 📄 Pagination logic
+  const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
+  const startIndex = (currentPage - 1) * employeesPerPage;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + employeesPerPage);
+
   return (
     <div className="register-bg d-flex align-items-center justify-content-center min-vh-100 py-4 px-3">
-      <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '1000px' }}>
+      <div className="glass-card p-4 rounded-4 w-100" style={{ maxWidth: '1100px' }}>
         <h4 className="text-center mb-4 text-white fw-bold">Registered Employees</h4>
+
+        {/* 🔍 Search Input */}
+        <div className="mb-3">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search employees..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page on search
+            }}
+          />
+        </div>
+
         <div className="table-responsive">
           <table className="table table-hover table-bordered mb-0 small-table">
             <thead className="table-light">
@@ -54,16 +84,16 @@ const ViewEmployees = () => {
               </tr>
             </thead>
             <tbody>
-              {employees.length === 0 ? (
+              {paginatedEmployees.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="text-center text-white py-4">
                     No Employees Found
                   </td>
                 </tr>
               ) : (
-                employees.map((employee, index) => (
+                paginatedEmployees.map((employee, index) => (
                   <tr key={employee.id} className="text-center align-middle">
-                    <td>{index + 1}</td>
+                    <td>{startIndex + index + 1}</td>
                     <td>{employee.name}</td>
                     <td>{employee.email}</td>
                     <td>{employee.phone}</td>
@@ -86,8 +116,32 @@ const ViewEmployees = () => {
             </tbody>
           </table>
         </div>
+
+        {/* ⬅️➡️ Pagination Buttons */}
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <span className="text-white small">
+            Page {currentPage} of {totalPages}
+          </span>
+          <div>
+            <button
+              className="btn btn-light btn-sm me-2"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            <button
+              className="btn btn-light btn-sm"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* 🖼️ Styles */}
       <style>
         {`
           .register-bg {
