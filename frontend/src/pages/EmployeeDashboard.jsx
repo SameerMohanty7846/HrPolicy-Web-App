@@ -1,10 +1,11 @@
+// 👇 Existing imports remain unchanged
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,9 +22,9 @@ const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeComponent, setActiveComponent] = useState('home');
-
   const [dailyData, setDailyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -38,63 +39,92 @@ const EmployeeDashboard = () => {
 
   const fetchRatingStats = async (employeeId) => {
     try {
+      setLoading(true);
+
       const [dailyRes, monthlyRes] = await Promise.all([
         axios.get(`http://localhost:2000/api/ratings/daily/${employeeId}`),
         axios.get(`http://localhost:2000/api/ratings/monthly/${employeeId}`),
       ]);
 
+      // 📊 Format daily ratings
       const dailyMap = {};
       dailyRes.data.forEach(item => {
         const date = new Date(item.label);
-        const day = date.toLocaleDateString('en-US', { weekday: 'short' });
-        dailyMap[day] = item.avg_rating;
+        const jsDay = date.getDay(); // Sunday = 0, Saturday = 6
+        const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1; // Monday = 0
+        dailyMap[weekDayIndex] = item.avg_rating;
       });
 
-      const formattedDaily = days.map(day => ({
+      const formattedDaily = days.map((day, index) => ({
         day,
-        avg_rating: dailyMap[day] || 0
+        avg_rating: dailyMap[index] || 0,
+        dayIndex: index + 1
       }));
       setDailyData(formattedDaily);
 
+      // 📅 Format monthly ratings
+      const currentMonthIndex = new Date().getMonth(); // 0-indexed
       const monthlyMap = {};
       monthlyRes.data.forEach(item => {
-        const [year, monthIndex] = item.label.split('-');
-        const month = new Date(year, monthIndex - 1).toLocaleDateString('en-US', { month: 'short' });
-        monthlyMap[month] = item.avg_rating;
+        const [year, monthStr] = item.label.split('-');
+        const index = parseInt(monthStr, 10) - 1;
+        if (index >= 0 && index < 12) {
+          monthlyMap[months[index]] = item.avg_rating;
+        }
       });
 
-      const formattedMonthly = months.map(month => ({
+      const formattedMonthly = months.map((month, index) => ({
         month,
-        avg_rating: monthlyMap[month] || 0
+        avg_rating: index > currentMonthIndex
+          ? null
+          : monthlyMap[month] !== undefined
+            ? monthlyMap[month]
+            : 0
       }));
+
       setMonthlyData(formattedMonthly);
+      setLoading(false);
 
     } catch (error) {
       console.error('Failed to fetch rating stats:', error);
+      setLoading(false);
     }
   };
 
-  const getInitial = (name) => (name ? name.charAt(0).toUpperCase() : '');
+  const getInitial = (name) => name?.charAt(0).toUpperCase() || '';
 
   const handleLogout = () => {
     sessionStorage.clear();
     navigate('/');
   };
 
-  const RatingChart = ({ data, xKey, title }) => (
-    <div className="chart-card p-4 shadow rounded mb-4">
-      <h5 className="chart-title mb-3">{title}</h5>
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid stroke="#444" strokeDasharray="4 4" />
-          <XAxis dataKey={xKey} stroke="#ccc" />
-          <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} stroke="#ccc" />
-          <Tooltip />
-          <Line type="monotone" dataKey="avg_rating" stroke="#00e6e6" strokeWidth={2} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
+  const RatingChart = ({ data, xKey, title }) => {
+    const isWeekly = xKey === 'day';
+
+    return (
+      <div className="chart-card p-4 shadow rounded mb-4">
+        <h5 className="chart-title mb-3">{title}</h5>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid stroke="#444" strokeDasharray="4 4" />
+            <XAxis
+              dataKey={isWeekly ? 'dayIndex' : xKey}
+              stroke="#ccc"
+              tickFormatter={(value) => {
+                if (isWeekly) {
+                  return days[value - 1] || '';
+                }
+                return value;
+              }}
+            />
+            <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} stroke="#ccc" />
+            <Tooltip />
+            <Bar dataKey="avg_rating" fill="#00e6e6" barSize={40} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
 
   const renderContent = () => {
     if (!user) return null;
@@ -116,10 +146,17 @@ const EmployeeDashboard = () => {
               <p className="mb-0">Logged in as <strong>{user.role}</strong></p>
             </div>
 
-            <div className="charts-container">
-              <RatingChart data={dailyData} xKey="day" title="📊 Weekly Avg Performance (Mon–Sat)" />
-              <RatingChart data={monthlyData} xKey="month" title="📅 Monthly Avg Performance (Jan–Dec)" />
-            </div>
+            {loading ? (
+              <div className="text-center my-5">
+                <div className="spinner-border text-info" role="status"></div>
+                <p className="mt-3 text-light">Loading performance data...</p>
+              </div>
+            ) : (
+              <div className="charts-container">
+                <RatingChart data={dailyData} xKey="day" title="📊 Weekly Avg Performance (Mon–Sat)" />
+                <RatingChart data={monthlyData} xKey="month" title="📅 Monthly Avg Performance (This Year)" />
+              </div>
+            )}
           </div>
         );
     }
@@ -127,16 +164,10 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="layout-bg d-flex" style={{ height: '100vh' }}>
-      <div
-        className="glass-sidebar d-flex flex-column text-white p-3"
-        style={{ width: '220px', position: 'fixed', height: '100vh', overflowY: 'auto' }}
-      >
+      <div className="glass-sidebar d-flex flex-column text-white p-3" style={{ width: '220px', position: 'fixed', height: '100vh', overflowY: 'auto' }}>
         {user && (
           <div className="text-center mb-4">
-            <div
-              className="rounded-circle bg-white bg-opacity-10 d-inline-flex align-items-center justify-content-center border border-light"
-              style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}
-            >
+            <div className="rounded-circle bg-white bg-opacity-10 d-inline-flex align-items-center justify-content-center border border-light" style={{ width: '70px', height: '70px', fontSize: '1.5rem' }}>
               {getInitial(user.name)}
             </div>
             <div className="mt-2 fw-bold">{user.name}</div>
@@ -145,34 +176,14 @@ const EmployeeDashboard = () => {
           </div>
         )}
 
-        <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>
-          📝 Assign Task
-        </button>
-
-        <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>
-          📋 Manage My Tasks
-        </button>
-
-        <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>
-          ✅ Granted Permissions
-        </button>
-
-        <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>
-          🔐 Change Password
-        </button>
-
-        <button
-          className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn"
-          onClick={handleLogout}
-        >
-          🚪 Logout
-        </button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
+        <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>🚪 Logout</button>
       </div>
 
-      <div
-        className="flex-grow-1 p-4 text-white"
-        style={{ marginLeft: '220px', width: 'calc(100% - 220px)', overflowY: 'auto' }}
-      >
+      <div className="flex-grow-1 p-4 text-white" style={{ marginLeft: '220px', width: 'calc(100% - 220px)', overflowY: 'auto' }}>
         {renderContent()}
       </div>
 
@@ -180,13 +191,11 @@ const EmployeeDashboard = () => {
         .layout-bg {
           background: linear-gradient(135deg, #1e1e2f, #1a1a27);
         }
-
         .glass-sidebar {
           background: rgba(255,255,255,0.05);
           backdrop-filter: blur(12px);
           border-right: 1px solid rgba(255,255,255,0.1);
         }
-
         .sidebar-btn {
           background: linear-gradient(to right, #4b6cb7, #182848);
           color: white;
@@ -199,45 +208,37 @@ const EmployeeDashboard = () => {
           transition: all 0.3s ease;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-
         .sidebar-btn:hover {
           background: linear-gradient(to right, #43cea2, #185a9d);
           transform: translateX(4px);
           box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
         }
-
         .logout-btn:hover {
           transform: scale(1.05);
         }
-
         .welcome-card {
           background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
           border-left: 4px solid #00e6e6;
         }
-
         .charts-container {
           display: grid;
           grid-template-columns: 1fr;
           gap: 24px;
         }
-
         @media (min-width: 768px) {
           .charts-container {
             grid-template-columns: repeat(2, 1fr);
           }
         }
-
         .chart-card {
           background-color: rgba(255, 255, 255, 0.05);
           border-radius: 16px;
           backdrop-filter: blur(8px);
           transition: transform 0.3s ease;
         }
-
         .chart-card:hover {
           transform: translateY(-5px);
         }
-
         .chart-title {
           color: #00e6e6;
           font-weight: 600;
