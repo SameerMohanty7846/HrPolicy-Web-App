@@ -2,40 +2,43 @@ import express from "express";
 
 // 🔐 AUTHENTICATION CONTROLLER (OTP-based Forgot Password)
 import {
-    login,
-    registerAdmin,
-    requestOtp,
-    verifyOtp,
-    changePasswordWithOtp
+  login,
+  registerAdmin,
+  requestOtp,
+  verifyOtp,
+  changePasswordWithOtp
 } from "../controller/authentication.controller.js";
 
 // 👔 HR CONTROLLER (Normal Password Change and HR Operations)
 import {
-    changePassword, // ✅ Normal change password (old + new password)
-    registerEmployee,
-    getAllEmployees,
-    deleteEmployee,
-    getEmployeeIncrements,
-    getSalaryReport,
-    assignTaskToEmployees,
-    getEmployeeWithPermission,
-    updateEmployeePermission,
-    getGrantedPermissions,
-    registerHR,
-    getAllTasksByEmployee,
-    startTask,
-    pauseTask,
-    resumeTask,
-    finishTask
+  changePassword,
+  registerEmployee,
+  getAllEmployees,
+  deleteEmployee,
+  getEmployeeIncrements,
+  getSalaryReport,
+  assignTaskToEmployees,
+  getEmployeeWithPermission,
+  updateEmployeePermission,
+  getGrantedPermissions,
+  registerHR,
+  getAllTasksByEmployee,
+  startTask,
+  pauseTask,
+  resumeTask,
+  finishTask
 } from "../controller/hrpolicy.controller.js";
 
 // 📊 ANALYTICS CONTROLLER
 import {
-    getDailyRatings,
-    getMonthlyRatings
-} from "../controller/analytics.controller.js"; // ✅ Removed getWeeklyRatings
+  getDailyRatings,
+  getMonthlyRatings,
+  getDailyEmployeeRatings,     // ✅ New
+  getMonthlyEmployeeRatings    // ✅ New
+} from "../controller/analytics.controller.js";
 
 const router = express.Router();
+
 
 // === AUTH ROUTES ===
 router.post('/login', login);
@@ -69,8 +72,12 @@ router.post('/tasks/pause', pauseTask);
 router.post('/tasks/resume', resumeTask);
 router.post('/tasks/finish', finishTask);
 
-// === ANALYTICS (only Daily and Monthly as requested) ===
-router.get('/ratings/daily/:employeeId', getDailyRatings);
-router.get('/ratings/monthly/:employeeId', getMonthlyRatings); // ✅ Weekly route removed
+// === ANALYTICS (Base Ratings Only) ===
+router.get('/ratings/daily/:employeeId', getDailyRatings);     // 📅 Per day avg rating (basic)
+router.get('/ratings/monthly/:employeeId', getMonthlyRatings); // 📅 Per month avg rating (basic)
+
+// === ANALYTICS (Employee Name + Floored Rating) ===
+router.get('/ratings/daily-employee/:employeeId', getDailyEmployeeRatings);     // ✅ Daily + Name + FLOOR
+router.get('/ratings/monthly-employee/:employeeId', getMonthlyEmployeeRatings); // ✅ Monthly + Name + FLOOR
 
 export default router;

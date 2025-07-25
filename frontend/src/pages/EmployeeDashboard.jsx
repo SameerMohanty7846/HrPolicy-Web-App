@@ -10,7 +10,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Legend
 } from 'recharts';
 
 import AssignTask from './AssignTask';
@@ -46,7 +47,7 @@ const EmployeeDashboard = () => {
         axios.get(`http://localhost:2000/api/ratings/monthly/${employeeId}`),
       ]);
 
-      // 📊 Format daily ratings
+      // Format daily ratings
       const dailyMap = {};
       dailyRes.data.forEach(item => {
         const date = new Date(item.label);
@@ -58,11 +59,12 @@ const EmployeeDashboard = () => {
       const formattedDaily = days.map((day, index) => ({
         day,
         avg_rating: dailyMap[index] || 0,
+        max_rating: 5,
         dayIndex: index + 1
       }));
       setDailyData(formattedDaily);
 
-      // 📅 Format monthly ratings
+      // Format monthly ratings
       const currentMonthIndex = new Date().getMonth(); // 0-indexed
       const monthlyMap = {};
       monthlyRes.data.forEach(item => {
@@ -75,14 +77,11 @@ const EmployeeDashboard = () => {
 
       const formattedMonthly = months.map((month, index) => ({
         month,
-        avg_rating: index > currentMonthIndex
-          ? null
-          : monthlyMap[month] !== undefined
-            ? monthlyMap[month]
-            : 0
+        avg_rating: index > currentMonthIndex ? null : (monthlyMap[month] || 0),
+        max_rating: index > currentMonthIndex ? null : 5
       }));
-
       setMonthlyData(formattedMonthly);
+
       setLoading(false);
 
     } catch (error) {
@@ -104,22 +103,19 @@ const EmployeeDashboard = () => {
     return (
       <div className="chart-card p-4 shadow rounded mb-4">
         <h5 className="chart-title mb-3">{title}</h5>
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={280}>
           <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid stroke="#444" strokeDasharray="4 4" />
             <XAxis
               dataKey={isWeekly ? 'dayIndex' : xKey}
               stroke="#ccc"
-              tickFormatter={(value) => {
-                if (isWeekly) {
-                  return days[value - 1] || '';
-                }
-                return value;
-              }}
+              tickFormatter={(value) => isWeekly ? days[value - 1] || '' : value}
             />
             <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} stroke="#ccc" />
             <Tooltip />
-            <Bar dataKey="avg_rating" fill="#00e6e6" barSize={40} radius={[6, 6, 0, 0]} />
+            <Legend />
+            <Bar dataKey="max_rating" fill="#444" barSize={20} radius={[4, 4, 0, 0]} name="Max Rating (5★)" />
+            <Bar dataKey="avg_rating" fill="#00e6e6" barSize={20} radius={[4, 4, 0, 0]} name="Your Rating" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -153,8 +149,8 @@ const EmployeeDashboard = () => {
               </div>
             ) : (
               <div className="charts-container">
-                <RatingChart data={dailyData} xKey="day" title="📊 Weekly Avg Performance (Mon–Sat)" />
-                <RatingChart data={monthlyData} xKey="month" title="📅 Monthly Avg Performance (This Year)" />
+                <RatingChart data={dailyData} xKey="day" title="📊 Weekly Rating: Achieved vs Max (Mon–Sat)" />
+                <RatingChart data={monthlyData} xKey="month" title="📅 Monthly Rating: Achieved vs Max (This Year)" />
               </div>
             )}
           </div>
@@ -197,55 +193,56 @@ const EmployeeDashboard = () => {
           border-right: 1px solid rgba(255,255,255,0.1);
         }
         .sidebar-btn {
-          background: linear-gradient(to right, #4b6cb7, #182848);
-          color: white;
-          border: none;
-          padding: 10px 14px;
-          margin-top: 10px;
-          border-radius: 12px;
-          font-weight: 600;
-          text-align: left;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        .sidebar-btn:hover {
-          background: linear-gradient(to right, #43cea2, #185a9d);
-          transform: translateX(4px);
-          box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-        }
-        .logout-btn:hover {
-          transform: scale(1.05);
-        }
-        .welcome-card {
-          background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
-          border-left: 4px solid #00e6e6;
-        }
-        .charts-container {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 24px;
-        }
-        @media (min-width: 768px) {
-          .charts-container {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-        .chart-card {
-          background-color: rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
-          backdrop-filter: blur(8px);
-          transition: transform 0.3s ease;
-        }
-        .chart-card:hover {
-          transform: translateY(-5px);
-        }
-        .chart-title {
-          color: #00e6e6;
-          font-weight: 600;
-        }
-      `}</style>
-    </div>
-  );
+         
+background: linear-gradient(to right, #4b6cb7, #182848);
+color: white;
+border: none;
+padding: 10px 14px;
+margin-top: 10px;
+border-radius: 12px;
+font-weight: 600;
+text-align: left;
+transition: all 0.3s ease;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.sidebar-btn:hover {
+background: linear-gradient(to right, #43cea2, #185a9d);
+transform: translateX(4px);
+box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+.logout-btn:hover {
+transform: scale(1.05);
+}
+.welcome-card {
+background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
+border-left: 4px solid #00e6e6;
+}
+.charts-container {
+display: grid;
+grid-template-columns: 1fr;
+gap: 24px;
+}
+@media (min-width: 768px) {
+.charts-container {
+grid-template-columns: repeat(2, 1fr);
+}
+}
+.chart-card {
+background-color: rgba(255, 255, 255, 0.05);
+border-radius: 16px;
+backdrop-filter: blur(8px);
+transition: transform 0.3s ease;
+}
+.chart-card:hover {
+transform: translateY(-5px);
+}
+.chart-title {
+color: #00e6e6;
+font-weight: 600;
+}
+`}</style>
+</div>
+);
 };
 
 export default EmployeeDashboard;
