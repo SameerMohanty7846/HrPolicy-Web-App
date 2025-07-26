@@ -391,31 +391,25 @@ export const finishTask = (req, res) => {
         const totalTimeHours = parseFloat((totalTimeMs / (1000 * 60 * 60)).toFixed(2));
         const formattedTime = formatDuration(totalTimeMs);
 
-        const diff = time_required - totalTimeHours;
+        const diff = parseFloat((totalTimeHours - time_required).toFixed(2));
+        let rating = 3; // Default: Exactly on time
+
+        if (diff <= -1) {
+            rating = 5;
+        } else if (diff < -0.5) {
+            rating = 4;
+        } else if (diff > 0.5 && diff <= 1) {
+            rating = 2;
+        } else if (diff > 1) {
+            rating = 1;
+        }
+
+        rating = Math.max(1, Math.min(5, rating)); // Ensure it's between 1 and 5
+
         console.log(`Task ID: ${taskId}`);
         console.log(`Time Required: ${time_required} hrs`);
         console.log(`Time Taken: ${totalTimeHours} hrs`);
         console.log(`Diff: ${diff}`);
-
-        let rating = 1;
-
-        if (totalTimeHours < (time_required / 2)) {
-            rating = 4; // Bonus: Faster than 50% time gets 4 stars
-        } else if (diff >= 0 && diff <= 0.5) {
-            rating = 5;
-        } else if (diff > 0.5 && diff <= 1) {
-            rating = 4;
-        } else if (diff < 0 && Math.abs(diff) <= 0.5) {
-            rating = 4;
-        } else if (diff < 0 && Math.abs(diff) <= 1) {
-            rating = 3;
-        } else if (diff < 0 && Math.abs(diff) <= 2) {
-            rating = 2;
-        } else {
-            rating = 1;
-        }
-
-        rating = Math.max(1, Math.min(5, Math.floor(rating)));
         console.log(`Calculated Rating: ${rating}`);
 
         const updateSql = `
@@ -447,7 +441,6 @@ const formatDuration = (ms) => {
     const seconds = totalSeconds % 60;
     return `${hours}h ${minutes}m ${seconds}s`;
 };
-
 
 
 

@@ -33,8 +33,10 @@ import {
 import {
   getDailyRatings,
   getMonthlyRatings,
-  getDailyEmployeeRatings,     // ✅ New
-  getMonthlyEmployeeRatings    // ✅ New
+  getDailyEmployeeRatings,
+  getMonthlyEmployeeRatings,
+  getWeeklyEmployeeRatings,     // ✅ NEW Weekly (Mon–Sat) Ratings for all employees
+  getYearlyEmployeeRatings      // ✅ NEW Yearly (Monthly) Ratings for all employees
 } from "../controller/analytics.controller.js";
 
 const router = express.Router();
@@ -44,13 +46,13 @@ const router = express.Router();
 router.post('/login', login);
 router.post('/register/admin', registerAdmin);
 
-router.post('/auth/request-otp', requestOtp);                           // Step 1: Request OTP
-router.post('/auth/verify-otp', verifyOtp);                             // Step 2: Verify OTP
-router.post('/auth/change-password-with-otp', changePasswordWithOtp);  // Step 3: Set New Password (Forgot)
+router.post('/auth/request-otp', requestOtp);
+router.post('/auth/verify-otp', verifyOtp);
+router.post('/auth/change-password-with-otp', changePasswordWithOtp);
+
 
 // === HR ROUTES ===
-router.post('/auth/change-password', changePassword); // ✅ Normal Change Password
-
+router.post('/auth/change-password', changePassword);
 router.post('/hr/insertemployee', registerEmployee);
 router.post('/hr/inserthr', registerHR);
 
@@ -60,10 +62,12 @@ router.get('/hr/employee-increments', getEmployeeIncrements);
 router.get('/hr/salary-report', getSalaryReport);
 router.post('/hr/assigntasks', assignTaskToEmployees);
 
+
 // === EMPLOYEE PERMISSIONS ===
 router.get('/employee/:id/permission', getEmployeeWithPermission);
 router.put('/employee/:id/permission', updateEmployeePermission);
 router.get('/employee/:id/granted-permissions', getGrantedPermissions);
+
 
 // === TASK MANAGEMENT ===
 router.get('/tasks/:employeeId', getAllTasksByEmployee);
@@ -72,12 +76,19 @@ router.post('/tasks/pause', pauseTask);
 router.post('/tasks/resume', resumeTask);
 router.post('/tasks/finish', finishTask);
 
+
 // === ANALYTICS (Base Ratings Only) ===
-router.get('/ratings/daily/:employeeId', getDailyRatings);     // 📅 Per day avg rating (basic)
-router.get('/ratings/monthly/:employeeId', getMonthlyRatings); // 📅 Per month avg rating (basic)
+router.get('/ratings/daily/:employeeId', getDailyRatings);
+router.get('/ratings/monthly/:employeeId', getMonthlyRatings);
+
 
 // === ANALYTICS (Employee Name + Floored Rating) ===
-router.get('/ratings/daily-employee/:employeeId', getDailyEmployeeRatings);     // ✅ Daily + Name + FLOOR
-router.get('/ratings/monthly-employee/:employeeId', getMonthlyEmployeeRatings); // ✅ Monthly + Name + FLOOR
+router.get('/ratings/daily-employee/:employeeId', getDailyEmployeeRatings);
+router.get('/ratings/monthly-employee/:employeeId', getMonthlyEmployeeRatings);
+
+
+// === ANALYTICS (Admin Dashboard) ===
+router.get('/analytics/weekly-employee-ratings', getWeeklyEmployeeRatings);   // ✅ Admin Weekly
+router.get('/analytics/yearly-employee-ratings', getYearlyEmployeeRatings);   // ✅ Admin Yearly
 
 export default router;

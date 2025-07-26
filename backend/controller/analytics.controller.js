@@ -121,3 +121,75 @@ export const getMonthlyEmployeeRatings = (req, res) => {
   });
 };
 
+
+//Analytics for admin
+// 📅 Weekly Ratings (Mon–Sat)
+export const getWeeklyEmployeeRatings = (req, res) => {
+  const query = `
+    SELECT 
+      DAYNAME(assignment_date) AS day,
+      employee_name,
+      ROUND(AVG(rating), 2) AS avg_rating
+    FROM tasks
+    WHERE 
+      WEEK(assignment_date) = WEEK(CURDATE())
+      AND YEAR(assignment_date) = YEAR(CURDATE())
+      AND DAYOFWEEK(assignment_date) BETWEEN 2 AND 7 -- Mon (2) to Sat (7)
+    GROUP BY day, employee_name
+    ORDER BY FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday');
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("[WeeklyRatings] Error:", err);
+      return res.status(500).json({ error: "Failed to get weekly ratings" });
+    }
+
+    const groupedData = {};
+
+    results.forEach(row => {
+      const day = row.day.slice(0, 3); // "Monday" → "Mon"
+      if (!groupedData[day]) groupedData[day] = { day };
+      groupedData[day][row.employee_name] = row.avg_rating;
+    });
+
+    const finalData = Object.values(groupedData);
+    res.json(finalData);
+  });
+};
+// 📆 Monthly Ratings (Jan–Dec)
+export const getYearlyEmployeeRatings = (req, res) => {
+  const query = `
+    SELECT 
+      MONTHNAME(assignment_date) AS month,
+      employee_name,
+      ROUND(AVG(rating), 2) AS avg_rating
+    FROM tasks
+    WHERE 
+      YEAR(assignment_date) = YEAR(CURDATE())
+    GROUP BY month, employee_name
+    ORDER BY FIELD(month, 
+      'January','February','March','April','May','June',
+      'July','August','September','October','November','December'
+    );
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("[YearlyRatings] Error:", err);
+      return res.status(500).json({ error: "Failed to get yearly ratings" });
+    }
+
+    const groupedData = {};
+
+    results.forEach(row => {
+      const month = row.month.slice(0, 3); // "January" → "Jan"
+      if (!groupedData[month]) groupedData[month] = { month };
+      groupedData[month][row.employee_name] = row.avg_rating;
+    });
+
+    const finalData = Object.values(groupedData);
+    res.json(finalData);
+  });
+};
+
