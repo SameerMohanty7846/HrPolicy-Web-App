@@ -12,6 +12,7 @@ import AssignTask from './AssignTask';
 import TaskManagement from './TaskManagement';
 import ChangePassword from './ChangePassword';
 import EmployeeGrantedPermission from './EmployeeGrantedPermission';
+import HrLeavePolicy from './HrLeavePolicy'; // ✅ New Import
 
 import {
   BarChart,
@@ -29,7 +30,6 @@ const HrDashboard = () => {
   const [user, setUser] = useState(null);
   const [activeComponent, setActiveComponent] = useState('home');
 
-  // New states for ratings
   const [dailyData, setDailyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,18 +48,16 @@ const HrDashboard = () => {
   const fetchRatingStats = async (employeeId) => {
     try {
       setLoading(true);
-
       const [dailyRes, monthlyRes] = await Promise.all([
         axios.get(`http://localhost:2000/api/ratings/daily/${employeeId}`),
         axios.get(`http://localhost:2000/api/ratings/monthly/${employeeId}`),
       ]);
 
-      // Format daily ratings
       const dailyMap = {};
       dailyRes.data.forEach(item => {
         const date = new Date(item.label);
-        const jsDay = date.getDay(); // Sunday = 0, Saturday = 6
-        const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1; // Monday = 0
+        const jsDay = date.getDay();
+        const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1;
         dailyMap[weekDayIndex] = item.avg_rating;
       });
 
@@ -71,8 +69,7 @@ const HrDashboard = () => {
       }));
       setDailyData(formattedDaily);
 
-      // Format monthly ratings
-      const currentMonthIndex = new Date().getMonth(); // 0-indexed
+      const currentMonthIndex = new Date().getMonth();
       const monthlyMap = {};
       monthlyRes.data.forEach(item => {
         const [year, monthStr] = item.label.split('-');
@@ -88,7 +85,6 @@ const HrDashboard = () => {
         max_rating: index > currentMonthIndex ? null : 5
       }));
       setMonthlyData(formattedMonthly);
-
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch rating stats:', error);
@@ -97,13 +93,11 @@ const HrDashboard = () => {
   };
 
   const getInitial = (name) => name?.charAt(0).toUpperCase() || '';
-
   const handleLogout = () => {
     sessionStorage.clear();
     navigate('/');
   };
 
-  // Chart component reused from EmployeeDashboard
   const RatingChart = ({ data, xKey, title }) => {
     const isWeekly = xKey === 'day';
 
@@ -139,6 +133,8 @@ const HrDashboard = () => {
         return <ViewEmployees />;
       case 'hrPolicy':
         return <HrPolicy />;
+      case 'leavePolicy':
+        return <HrLeavePolicy />; // ✅ Leave Policy component
       case 'assignTask':
         return <AssignTask />;
       case 'taskManagement':
@@ -154,7 +150,6 @@ const HrDashboard = () => {
               <h2 className="fw-bold mb-2">👋 Welcome back, {user.name}</h2>
               <p className="mb-0">Logged in as <strong>{user.role}</strong></p>
             </div>
-
             {loading ? (
               <div className="text-center my-5">
                 <div className="spinner-border text-info" role="status"></div>
@@ -188,6 +183,7 @@ const HrDashboard = () => {
         <button className="sidebar-btn" onClick={() => setActiveComponent('addEmployee')}>➕ Add Employee</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('viewEmployees')}>👥 View Employees</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('hrPolicy')}>📜 HR Policy</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('leavePolicy')}>📘 Leave Policy</button> {/* ✅ New Sidebar Option */}
         <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
@@ -203,13 +199,11 @@ const HrDashboard = () => {
         .layout-bg {
           background: linear-gradient(135deg, #1e1e2f, #1a1a27);
         }
-
         .glass-sidebar {
           background: rgba(255,255,255,0.05);
           backdrop-filter: blur(12px);
           border-right: 1px solid rgba(255,255,255,0.1);
         }
-
         .sidebar-btn {
           background: linear-gradient(to right, #4b6cb7, #182848);
           color: white;
@@ -222,45 +216,37 @@ const HrDashboard = () => {
           transition: all 0.3s ease;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-
         .sidebar-btn:hover {
           background: linear-gradient(to right, #43cea2, #185a9d);
           transform: translateX(4px);
           box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
         }
-
         .logout-btn:hover {
           transform: scale(1.05);
         }
-
         .welcome-card {
           background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
           border-left: 4px solid #00e6e6;
         }
-
         .charts-container {
           display: grid;
           grid-template-columns: 1fr;
           gap: 24px;
         }
-
         @media (min-width: 768px) {
           .charts-container {
             grid-template-columns: repeat(2, 1fr);
           }
         }
-
         .chart-card {
           background-color: rgba(255, 255, 255, 0.05);
           border-radius: 16px;
           backdrop-filter: blur(8px);
           transition: transform 0.3s ease;
         }
-
         .chart-card:hover {
           transform: translateY(-5px);
         }
-
         .chart-title {
           color: #00e6e6;
           font-weight: 600;

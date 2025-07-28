@@ -2,275 +2,295 @@ import db from "../config/db.js";
 import bcrypt from "bcrypt";
 
 export const registerEmployee = (req, res) => {
-    const { name, email, phone, salary, dateOfJoining, employeeType, experience, department } = req.body;
-    const preJoiningExperience = employeeType === 'Fresher' ? 0 : parseFloat(experience) || 0;
+  const { name, email, phone, salary, dateOfJoining, employeeType, experience, department } = req.body;
+  const preJoiningExperience = employeeType === 'Fresher' ? 0 : parseFloat(experience) || 0;
 
-    // Insert into employees
-    const insertEmployeeSQL = `
-        INSERT INTO employees 
-        (name, email, phone, salary, dateOfJoining, employeeType, experience, department)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const insertEmployeeSQL = `
+    INSERT INTO employees 
+    (name, email, phone, salary, dateOfJoining, employeeType, experience, department)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.query(insertEmployeeSQL, [name, email, phone, salary, dateOfJoining, employeeType, preJoiningExperience, department], (err, result) => {
-        if (err) {
-            console.error('Error inserting employee:', err);
-            return res.status(500).send('Failed to insert employee');
+  db.query(insertEmployeeSQL, [name, email, phone, salary, dateOfJoining, employeeType, preJoiningExperience, department], (err, result) => {
+    if (err) {
+      console.error('Error inserting employee:', err);
+      return res.status(500).send('Failed to insert employee');
+    }
+
+    const empId = result.insertId;
+    const rawPassword = `${name.substring(0, 3).toLowerCase()}123`;
+    const userRole = department.toLowerCase() === 'hr' ? 'hr' : 'employee';
+
+    bcrypt.hash(rawPassword, 10, (hashErr, hashedPassword) => {
+      if (hashErr) {
+        console.error('Error hashing password:', hashErr);
+        return res.status(500).send('Error creating user password');
+      }
+
+      const insertUserSQL = `
+        INSERT INTO users (employee_id, name, email, password, role, department) 
+        VALUES (?, ?, ?, ?, ?, ?)`;
+
+      db.query(insertUserSQL, [empId, name, email, hashedPassword, userRole, department], (errUser) => {
+        if (errUser) {
+          console.error('Error inserting user:', errUser);
+          return res.status(500).send('Employee added, but user creation failed');
         }
 
-        const empId = result.insertId;
-        const rawPassword = `${name.substring(0, 3).toLowerCase()}123`;
-        const userRole = department.toLowerCase() === 'hr' ? 'hr' : 'employee';
+        const insertPermissionSQL = `
+          INSERT INTO EmployeePermission (employee_id, E_add, E_read, E_edit, E_delete)
+          VALUES (?, false, false, false, false)`;
 
-        bcrypt.hash(rawPassword, 10, (hashErr, hashedPassword) => {
-            if (hashErr) {
-                console.error('Error hashing password:', hashErr);
-                return res.status(500).send('Error creating user password');
-            }
+        db.query(insertPermissionSQL, [empId], (permErr) => {
+          if (permErr) {
+            console.error('Error inserting EmployeePermission:', permErr);
+          }
 
-            // Insert into users
-            const insertUserSQL = `
-                INSERT INTO users (employee_id, name, email, password, role, department) 
+          const joiningDate = new Date(dateOfJoining);
+          const today = new Date();
+          const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
+          const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
+
+          const insertLeaveSummary = () => {
+            const leavePolicySQL = `SELECT leave_type, allowed_days FROM hr_leave_policy`;
+
+            db.query(leavePolicySQL, (leaveErr, leaveRows) => {
+              if (leaveErr) {
+                console.error('Error fetching leave policy:', leaveErr);
+                return res.status(500).send('Failed to fetch leave policy');
+              }
+
+              let earnedLeave = 0, casualLeave = 0, sickLeave = 0, lwpLeave = 0;
+
+              leaveRows.forEach(row => {
+                const type = row.leave_type.toLowerCase();
+                if (type.includes("earned")) earnedLeave = row.allowed_days;
+                if (type.includes("casual")) casualLeave = row.allowed_days;
+                if (type.includes("sick")) sickLeave = row.allowed_days;
+                if (type.includes("lwp")) lwpLeave = row.allowed_days;
+              });
+
+              const insertLeaveSQL = `
+                INSERT INTO employee_leave_summary 
+                (employee_id, employee_name, total_earned_leave, total_casual_leave, total_sick_leave, total_lwp_leave)
                 VALUES (?, ?, ?, ?, ?, ?)`;
 
-            db.query(insertUserSQL, [empId, name, email, hashedPassword, userRole, department], (errUser) => {
-                if (errUser) {
-                    console.error('Error inserting user:', errUser);
-                    return res.status(500).send('Employee added, but user creation failed');
+              db.query(insertLeaveSQL, [empId, name, earnedLeave, casualLeave, sickLeave, lwpLeave], (leaveInsertErr) => {
+                if (leaveInsertErr) {
+                  console.error('Error inserting leave summary:', leaveInsertErr);
+                  return res.status(500).send('Employee added, but leave summary failed');
                 }
 
-                // Insert default EmployeePermission WITHOUT department
-                const insertPermissionSQL = `
-                    INSERT INTO EmployeePermission (employee_id, E_add, E_read, E_edit, E_delete)
-                    VALUES (?, false, false, false, false)`;
-
-                db.query(insertPermissionSQL, [empId], (permErr) => {
-                    if (permErr) {
-                        console.error('Error inserting EmployeePermission:', permErr);
-                        // continue without failing the whole request
-                    }
-
-                    const joiningDate = new Date(dateOfJoining);
-                    const today = new Date();
-                    const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
-                    const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
-
-                    const insertLeaveSummary = () => {
-                        // Fetch leave policy
-                        const leavePolicySQL = `SELECT leave_type, allowed_days FROM hr_leave_policy`;
-
-                        db.query(leavePolicySQL, (leaveErr, leaveRows) => {
-                            if (leaveErr) {
-                                console.error('Error fetching leave policy:', leaveErr);
-                                return res.status(500).send('Failed to fetch leave policy');
-                            }
-
-                            let earnedLeave = 0, casualLeave = 0, sickLeave = 0;
-
-                            leaveRows.forEach(row => {
-                                const type = row.leave_type.toLowerCase();
-                                if (type.includes("earned")) earnedLeave = row.allowed_days;
-                                if (type.includes("casual")) casualLeave = row.allowed_days;
-                                if (type.includes("sick")) sickLeave = row.allowed_days;
-                            });
-
-                            const insertLeaveSQL = `
-                                INSERT INTO employee_leave_summary 
-                                (employee_id, employee_name, total_earned_leave, total_casual_leave, total_sick_leave)
-                                VALUES (?, ?, ?, ?, ?)`;
-
-                            db.query(insertLeaveSQL, [empId, name, earnedLeave, casualLeave, sickLeave], (leaveInsertErr) => {
-                                if (leaveInsertErr) {
-                                    console.error('Error inserting leave summary:', leaveInsertErr);
-                                    return res.status(500).send('Employee added, but leave summary failed');
-                                }
-                                // If everything is done till this point
-                                res.send('Employee, User, Permissions, Increment, Leave Summary added successfully');
-                            });
-                        });
-                    };
-
-                    if (inCompanyExperience < 0.5) {
-                        // Insert into employee_increments with default values
-                        const insertIncrementSQL = `
-                            INSERT INTO employee_increments 
-                            (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-                        db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, 0, 'Not Eligible', 0, department], (err3) => {
-                            if (err3) {
-                                console.error('Error inserting increment:', err3);
-                                return res.status(500).send('Employee added, but increment insertion failed');
-                            }
-                            insertLeaveSummary(); // call leave summary insert
-                        });
-                    } else {
-                        // Fetch avg rating
-                        const avgRatingSQL = `SELECT AVG(rating) AS avgRating FROM tasks WHERE employee_id = ?`;
-
-                        db.query(avgRatingSQL, [empId], (err2, ratingResults) => {
-                            if (err2) {
-                                console.error('Error fetching average rating:', err2);
-                                return res.status(500).send('Employee added, but failed to fetch average rating');
-                            }
-
-                            const avgRating = parseFloat(ratingResults[0].avgRating) || 0;
-                            const flooredRating = Math.max(1, Math.floor(avgRating));
-
-                            const performanceSQL = `
-                                SELECT performance_label, increment_percent
-                                FROM performance_levels
-                                WHERE min_rating = ?
-                                LIMIT 1`;
-
-                            db.query(performanceSQL, [flooredRating], (err3, performanceResults) => {
-                                if (err3 || performanceResults.length === 0) {
-                                    console.error('Error fetching performance level:', err3);
-                                    return res.status(500).send('Failed to fetch performance level');
-                                }
-
-                                const { performance_label, increment_percent } = performanceResults[0];
-
-                                const insertIncrementSQL = `
-                                    INSERT INTO employee_increments 
-                                    (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-                                db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, avgRating, performance_label, increment_percent, department], (err4) => {
-                                    if (err4) {
-                                        console.error('Error inserting increment:', err4);
-                                        return res.status(500).send('Employee added, but increment insertion failed');
-                                    }
-                                    insertLeaveSummary(); // call leave summary insert
-                                });
-                            });
-                        });
-                    }
-                });
+                res.send('Employee, User, Permissions, Increment, Leave Summary added successfully');
+              });
             });
+          };
+
+          if (inCompanyExperience < 0.5) {
+            const insertIncrementSQL = `
+              INSERT INTO employee_increments 
+              (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+            db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, 0, 'Not Eligible', 0, department], (err3) => {
+              if (err3) {
+                console.error('Error inserting increment:', err3);
+                return res.status(500).send('Employee added, but increment insertion failed');
+              }
+              insertLeaveSummary();
+            });
+          } else {
+            const avgRatingSQL = `SELECT AVG(rating) AS avgRating FROM tasks WHERE employee_id = ?`;
+
+            db.query(avgRatingSQL, [empId], (err2, ratingResults) => {
+              if (err2) {
+                console.error('Error fetching average rating:', err2);
+                return res.status(500).send('Employee added, but failed to fetch average rating');
+              }
+
+              const avgRating = parseFloat(ratingResults[0].avgRating) || 0;
+              const flooredRating = Math.max(1, Math.floor(avgRating));
+
+              const performanceSQL = `
+                SELECT performance_label, increment_percent
+                FROM performance_levels
+                WHERE min_rating = ?
+                LIMIT 1`;
+
+              db.query(performanceSQL, [flooredRating], (err3, performanceResults) => {
+                if (err3 || performanceResults.length === 0) {
+                  console.error('Error fetching performance level:', err3);
+                  return res.status(500).send('Failed to fetch performance level');
+                }
+
+                const { performance_label, increment_percent } = performanceResults[0];
+
+                const insertIncrementSQL = `
+                  INSERT INTO employee_increments 
+                  (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+                db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, avgRating, performance_label, increment_percent, department], (err4) => {
+                  if (err4) {
+                    console.error('Error inserting increment:', err4);
+                    return res.status(500).send('Employee added, but increment insertion failed');
+                  }
+                  insertLeaveSummary();
+                });
+              });
+            });
+          }
         });
+      });
     });
+  });
 };
-
-
-
-
-
-
-
-
 
 
 export const registerHR = (req, res) => {
-    const { name, email, phone, salary, dateOfJoining, employeeType, experience } = req.body;
-    const department = 'HR';  // Forcefully set department as HR
-    const preJoiningExperience = employeeType === 'Fresher' ? 0 : parseFloat(experience) || 0;
+  const { name, email, phone, salary, dateOfJoining, employeeType, experience } = req.body;
+  const department = 'HR'; // Set fixed department
+  const preJoiningExperience = employeeType === 'Fresher' ? 0 : parseFloat(experience) || 0;
 
-    const insertEmployeeSQL = `
-        INSERT INTO employees 
-        (name, email, phone, salary, dateOfJoining, employeeType, experience, department)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const insertEmployeeSQL = `
+    INSERT INTO employees 
+    (name, email, phone, salary, dateOfJoining, employeeType, experience, department)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.query(insertEmployeeSQL, [name, email, phone, salary, dateOfJoining, employeeType, preJoiningExperience, department], (err, result) => {
-        if (err) {
-            console.error('Error inserting HR:', err);
-            return res.status(500).send('Failed to insert HR');
+  db.query(insertEmployeeSQL, [name, email, phone, salary, dateOfJoining, employeeType, preJoiningExperience, department], (err, result) => {
+    if (err) {
+      console.error('Error inserting HR:', err);
+      return res.status(500).send('Failed to insert HR');
+    }
+
+    const empId = result.insertId;
+    const rawPassword = `${name.substring(0, 3).toLowerCase()}123`;
+    const userRole = 'hr';
+
+    bcrypt.hash(rawPassword, 10, (hashErr, hashedPassword) => {
+      if (hashErr) {
+        console.error('Error hashing password:', hashErr);
+        return res.status(500).send('Error creating HR user password');
+      }
+
+      const insertUserSQL = `
+        INSERT INTO users (employee_id, name, email, password, role, department) 
+        VALUES (?, ?, ?, ?, ?, ?)`;
+
+      db.query(insertUserSQL, [empId, name, email, hashedPassword, userRole, department], (errUser) => {
+        if (errUser) {
+          console.error('Error inserting HR user:', errUser);
+          return res.status(500).send('HR added, but user creation failed');
         }
 
-        const empId = result.insertId;
-        const rawPassword = `${name.substring(0, 3).toLowerCase()}123`;
-        const userRole = 'hr';  // Role fixed as HR
+        const insertPermissionSQL = `
+          INSERT INTO EmployeePermission (employee_id, E_add, E_read, E_edit, E_delete)
+          VALUES (?, false, false, false, false)`;
 
-        bcrypt.hash(rawPassword, 10, (hashErr, hashedPassword) => {
-            if (hashErr) {
-                console.error('Error hashing HR password:', hashErr);
-                return res.status(500).send('Error creating HR user password');
-            }
+        db.query(insertPermissionSQL, [empId], (permErr) => {
+          if (permErr) {
+            console.error('Error inserting HR Permission:', permErr);
+            // Continue anyway
+          }
 
-            const insertUserSQL = `
-                INSERT INTO users (employee_id, name, email, password, role, department) 
+          const joiningDate = new Date(dateOfJoining);
+          const today = new Date();
+          const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
+          const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
+
+          const insertLeaveSummary = () => {
+            const leavePolicySQL = `SELECT leave_type, allowed_days FROM hr_leave_policy`;
+
+            db.query(leavePolicySQL, (leaveErr, leaveRows) => {
+              if (leaveErr) {
+                console.error('Error fetching leave policy for HR:', leaveErr);
+                return res.status(500).send('HR added, but failed to fetch leave policy');
+              }
+
+              let earnedLeave = 0, casualLeave = 0, sickLeave = 0, lwpLeave = 0;
+
+              leaveRows.forEach(row => {
+                const type = row.leave_type.toLowerCase();
+                if (type.includes("earned")) earnedLeave = row.allowed_days;
+                if (type.includes("casual")) casualLeave = row.allowed_days;
+                if (type.includes("sick")) sickLeave = row.allowed_days;
+                if (type.includes("lwp")) lwpLeave = row.allowed_days;
+              });
+
+              const insertLeaveSQL = `
+                INSERT INTO employee_leave_summary 
+                (employee_id, employee_name, total_earned_leave, total_casual_leave, total_sick_leave, total_lwp_leave)
                 VALUES (?, ?, ?, ?, ?, ?)`;
 
-            db.query(insertUserSQL, [empId, name, email, hashedPassword, userRole, department], (errUser) => {
-                if (errUser) {
-                    console.error('Error inserting HR user:', errUser);
-                    return res.status(500).send('HR added, but user creation failed');
+              db.query(insertLeaveSQL, [empId, name, earnedLeave, casualLeave, sickLeave, lwpLeave], (leaveInsertErr) => {
+                if (leaveInsertErr) {
+                  console.error('Error inserting HR leave summary:', leaveInsertErr);
+                  return res.status(500).send('HR added, but leave summary failed');
                 }
 
-                const insertPermissionSQL = `
-                    INSERT INTO EmployeePermission (employee_id, E_add, E_read, E_edit, E_delete)
-                    VALUES (?, false, false, false, false)`;
-
-                db.query(insertPermissionSQL, [empId], (permErr) => {
-                    if (permErr) {
-                        console.error('Error inserting HR Permission:', permErr);
-                        // Proceed further even if permission fails
-                    }
-
-                    const joiningDate = new Date(dateOfJoining);
-                    const today = new Date();
-                    const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
-                    const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
-
-                    if (inCompanyExperience < 0.5) {
-                        const insertIncrementSQL = `
-                            INSERT INTO employee_increments 
-                            (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-                        db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, 0, 'Not Eligible', 0, department], (err3) => {
-                            if (err3) {
-                                console.error('Error inserting HR increment:', err3);
-                                return res.status(500).send('HR added, but increment insertion failed');
-                            }
-                            res.send('HR, User, Permissions, Increment added (Not Eligible)');
-                        });
-                    } else {
-                        const avgRatingSQL = `SELECT AVG(rating) AS avgRating FROM tasks WHERE employee_id = ?`;
-
-                        db.query(avgRatingSQL, [empId], (err2, ratingResults) => {
-                            if (err2) {
-                                console.error('Error fetching HR average rating:', err2);
-                                return res.status(500).send('HR added, but failed to fetch average rating');
-                            }
-
-                            const avgRating = parseFloat(ratingResults[0].avgRating) || 0;
-                            const flooredRating = Math.max(1, Math.floor(avgRating));
-
-                            const performanceSQL = `
-                                SELECT performance_label, increment_percent
-                                FROM performance_levels
-                                WHERE min_rating = ?
-                                LIMIT 1`;
-
-                            db.query(performanceSQL, [flooredRating], (err3, performanceResults) => {
-                                if (err3 || performanceResults.length === 0) {
-                                    console.error('Error fetching performance level for HR:', err3);
-                                    return res.status(500).send('Failed to fetch HR performance level');
-                                }
-
-                                const { performance_label, increment_percent } = performanceResults[0];
-
-                                const insertIncrementSQL = `
-                                    INSERT INTO employee_increments 
-                                    (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-                                db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, avgRating, performance_label, increment_percent, department], (err4) => {
-                                    if (err4) {
-                                        console.error('Error inserting HR increment:', err4);
-                                        return res.status(500).send('HR added, but increment insertion failed');
-                                    }
-                                    res.send('HR, User, Permissions, Increment added successfully');
-                                });
-                            });
-                        });
-                    }
-                });
+                res.send('HR, User, Permissions, Increment, Leave Summary added successfully');
+              });
             });
-        });
-    });
-};
+          };
 
+          if (inCompanyExperience < 0.5) {
+            const insertIncrementSQL = `
+              INSERT INTO employee_increments 
+              (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+            db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, 0, 'Not Eligible', 0, department], (err3) => {
+              if (err3) {
+                console.error('Error inserting HR increment:', err3);
+                return res.status(500).send('HR added, but increment insertion failed');
+              }
+              insertLeaveSummary();
+            });
+          } else {
+            const avgRatingSQL = `SELECT AVG(rating) AS avgRating FROM tasks WHERE employee_id = ?`;
+
+            db.query(avgRatingSQL, [empId], (err2, ratingResults) => {
+              if (err2) {
+                console.error('Error fetching HR average rating:', err2);
+                return res.status(500).send('HR added, but failed to fetch average rating');
+              }
+
+              const avgRating = parseFloat(ratingResults[0].avgRating) || 0;
+              const flooredRating = Math.max(1, Math.floor(avgRating));
+
+              const performanceSQL = `
+                SELECT performance_label, increment_percent
+                FROM performance_levels
+                WHERE min_rating = ?
+                LIMIT 1`;
+
+              db.query(performanceSQL, [flooredRating], (err3, performanceResults) => {
+                if (err3 || performanceResults.length === 0) {
+                  console.error('Error fetching performance level for HR:', err3);
+                  return res.status(500).send('Failed to fetch HR performance level');
+                }
+
+                const { performance_label, increment_percent } = performanceResults[0];
+
+                const insertIncrementSQL = `
+                  INSERT INTO employee_increments 
+                  (emp_id, emp_name, experience_before_joining, experience_in_company, total_experience, avg_rating, performance, increment_percent, department) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+                db.query(insertIncrementSQL, [empId, name, preJoiningExperience, inCompanyExperience, totalExperience, avgRating, performance_label, increment_percent, department], (err4) => {
+                  if (err4) {
+                    console.error('Error inserting HR increment:', err4);
+                    return res.status(500).send('HR added, but increment insertion failed');
+                  }
+                  insertLeaveSummary();
+                });
+              });
+            });
+          }
+        });
+      });
+    });
+  });
+};
 
 
 // --------- Get all Employees excluding the first record

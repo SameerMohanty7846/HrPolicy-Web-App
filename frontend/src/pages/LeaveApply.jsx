@@ -5,18 +5,20 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const LeaveApply = () => {
   const [leaveData, setLeaveData] = useState({
     employee_id: '',
+    employee_name: '',
     leave_type: '',
     from_date: '',
     to_date: '',
     reason: '',
   });
 
-  const [leaveStats] = useState({
-    EL: 6,
-    CL: 4,
-    SL: 3,
-    total_taken: 13,
-    total_present: 34,
+  const [leaveStats, setLeaveStats] = useState({
+    EL: 0,
+    CL: 0,
+    SL: 0,
+    LWP: 0,
+    total_taken: 0,
+    total_present: 0,
   });
 
   const [noOfDays, setNoOfDays] = useState('');
@@ -28,7 +30,24 @@ const LeaveApply = () => {
       setLeaveData(prev => ({
         ...prev,
         employee_id: storedUser.id,
+        employee_name: storedUser.name,
       }));
+
+      axios.get(`http://localhost:2000/api/summary/${storedUser.id}`)
+        .then((res) => {
+          const data = res.data;
+          setLeaveStats({
+            EL: data.el_remaining,
+            CL: data.cl_remaining,
+            SL: data.sl_remaining,
+            LWP: data.lwp_remaining,
+            total_taken: data.total_unpaid_leave,
+            total_present: data.total_lwp,
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to fetch leave summary:", err);
+        });
     }
   }, []);
 
@@ -68,11 +87,10 @@ const LeaveApply = () => {
 
   return (
     <div className="leave-bg px-3 pt-3" style={{ height: '100vh' }}>
-      {/* Circles */}
       <div className="text-white text-center mb-3">
         <h6 className="fw-bold mb-3">Leave Balance</h6>
         <div className="d-flex justify-content-center flex-wrap gap-4">
-          {['EL', 'CL', 'SL'].map((type) => (
+          {['EL', 'CL', 'SL', 'LWP'].map((type) => (
             <div key={type} style={circleStyle}>
               <div style={{ fontSize: '1rem', fontWeight: '600' }}>{type}</div>
               <div style={{ fontSize: '26px', fontWeight: 'bold' }}>{leaveStats[type]}</div>
@@ -82,10 +100,16 @@ const LeaveApply = () => {
         </div>
       </div>
 
-      {/* Leave Form */}
       <div className="glass-card mx-auto p-3 rounded-4" style={{ maxWidth: '460px' }}>
         <h6 className="text-center text-white mb-3 fw-bold">Apply Leave</h6>
         <form onSubmit={handleSubmit}>
+          {/* Hidden Employee Name */}
+          <input
+            type="hidden"
+            name="employee_name"
+            value={leaveData.employee_name}
+          />
+
           <div className="d-flex gap-2 mb-2">
             <div className="w-50">
               <label className="form-label text-white small">Employee ID</label>
@@ -110,6 +134,7 @@ const LeaveApply = () => {
                 <option value="EL">Earned Leave</option>
                 <option value="CL">Casual Leave</option>
                 <option value="SL">Sick Leave</option>
+                <option value="LWP">Leave Without Pay</option>
               </select>
             </div>
           </div>
@@ -169,17 +194,15 @@ const LeaveApply = () => {
         </form>
       </div>
 
-      {/* Summary */}
       <div className="text-white text-center mt-3 d-flex justify-content-center gap-3 flex-wrap">
         <div className="bg-light text-dark rounded-3 py-1 px-3 shadow-sm">
-          <strong>Taken:</strong> {leaveStats.total_taken}
+          <strong>Total Unpaid Leave:</strong> {leaveStats.total_taken}
         </div>
         <div className="bg-light text-dark rounded-3 py-1 px-3 shadow-sm">
-          <strong>Total:</strong> {leaveStats.total_present}
+          <strong>Total Lwp:</strong> {leaveStats.total_present}
         </div>
       </div>
 
-      {/* Internal CSS */}
       <style>{`
         .leave-bg {
           background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
