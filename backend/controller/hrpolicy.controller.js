@@ -54,6 +54,41 @@ export const registerEmployee = (req, res) => {
                     const inCompanyExperience = +((today - joiningDate) / (1000 * 60 * 60 * 24 * 365)).toFixed(2);
                     const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
 
+                    const insertLeaveSummary = () => {
+                        // Fetch leave policy
+                        const leavePolicySQL = `SELECT leave_type, allowed_days FROM hr_leave_policy`;
+
+                        db.query(leavePolicySQL, (leaveErr, leaveRows) => {
+                            if (leaveErr) {
+                                console.error('Error fetching leave policy:', leaveErr);
+                                return res.status(500).send('Failed to fetch leave policy');
+                            }
+
+                            let earnedLeave = 0, casualLeave = 0, sickLeave = 0;
+
+                            leaveRows.forEach(row => {
+                                const type = row.leave_type.toLowerCase();
+                                if (type.includes("earned")) earnedLeave = row.allowed_days;
+                                if (type.includes("casual")) casualLeave = row.allowed_days;
+                                if (type.includes("sick")) sickLeave = row.allowed_days;
+                            });
+
+                            const insertLeaveSQL = `
+                                INSERT INTO employee_leave_summary 
+                                (employee_id, employee_name, total_earned_leave, total_casual_leave, total_sick_leave)
+                                VALUES (?, ?, ?, ?, ?)`;
+
+                            db.query(insertLeaveSQL, [empId, name, earnedLeave, casualLeave, sickLeave], (leaveInsertErr) => {
+                                if (leaveInsertErr) {
+                                    console.error('Error inserting leave summary:', leaveInsertErr);
+                                    return res.status(500).send('Employee added, but leave summary failed');
+                                }
+                                // If everything is done till this point
+                                res.send('Employee, User, Permissions, Increment, Leave Summary added successfully');
+                            });
+                        });
+                    };
+
                     if (inCompanyExperience < 0.5) {
                         // Insert into employee_increments with default values
                         const insertIncrementSQL = `
@@ -66,7 +101,7 @@ export const registerEmployee = (req, res) => {
                                 console.error('Error inserting increment:', err3);
                                 return res.status(500).send('Employee added, but increment insertion failed');
                             }
-                            res.send('Employee, User, Permissions, Increment added (Not Eligible)');
+                            insertLeaveSummary(); // call leave summary insert
                         });
                     } else {
                         // Fetch avg rating
@@ -105,7 +140,7 @@ export const registerEmployee = (req, res) => {
                                         console.error('Error inserting increment:', err4);
                                         return res.status(500).send('Employee added, but increment insertion failed');
                                     }
-                                    res.send('Employee, User, Permissions, Increment added successfully');
+                                    insertLeaveSummary(); // call leave summary insert
                                 });
                             });
                         });
@@ -115,6 +150,16 @@ export const registerEmployee = (req, res) => {
         });
     });
 };
+
+
+
+
+
+
+
+
+
+
 export const registerHR = (req, res) => {
     const { name, email, phone, salary, dateOfJoining, employeeType, experience } = req.body;
     const department = 'HR';  // Forcefully set department as HR

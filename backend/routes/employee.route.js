@@ -38,6 +38,12 @@ import {
   getWeeklyEmployeeRatings,     // ✅ NEW Weekly (Mon–Sat) Ratings for all employees
   getYearlyEmployeeRatings      // ✅ NEW Yearly (Monthly) Ratings for all employees
 } from "../controller/analytics.controller.js";
+import { submitLeaveApplication } from "../controller/Leave.Controller.js";
+//Leave Controller
+
+
+
+
 
 const router = express.Router();
 
@@ -90,5 +96,10 @@ router.get('/ratings/monthly-employee/:employeeId', getMonthlyEmployeeRatings);
 // === ANALYTICS (Admin Dashboard) ===
 router.get('/analytics/weekly-employee-ratings', getWeeklyEmployeeRatings);   // ✅ Admin Weekly
 router.get('/analytics/yearly-employee-ratings', getYearlyEmployeeRatings);   // ✅ Admin Yearly
+
+
+//Leaves
+router.post('/leave/apply', submitLeaveApplication);
+
 
 export default router;

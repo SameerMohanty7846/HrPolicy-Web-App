@@ -1,4 +1,3 @@
-// 👇 Existing imports remain unchanged
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -18,6 +17,7 @@ import AssignTask from './AssignTask';
 import TaskManagement from './TaskManagement';
 import ChangePassword from './ChangePassword';
 import EmployeeGrantedPermission from './EmployeeGrantedPermission';
+import LeaveApply from './LeaveApply'; // ✅ NEW IMPORT
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -47,12 +47,11 @@ const EmployeeDashboard = () => {
         axios.get(`http://localhost:2000/api/ratings/monthly/${employeeId}`),
       ]);
 
-      // Format daily ratings
       const dailyMap = {};
       dailyRes.data.forEach(item => {
         const date = new Date(item.label);
-        const jsDay = date.getDay(); // Sunday = 0, Saturday = 6
-        const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1; // Monday = 0
+        const jsDay = date.getDay();
+        const weekDayIndex = jsDay === 0 ? 6 : jsDay - 1;
         dailyMap[weekDayIndex] = item.avg_rating;
       });
 
@@ -64,8 +63,7 @@ const EmployeeDashboard = () => {
       }));
       setDailyData(formattedDaily);
 
-      // Format monthly ratings
-      const currentMonthIndex = new Date().getMonth(); // 0-indexed
+      const currentMonthIndex = new Date().getMonth();
       const monthlyMap = {};
       monthlyRes.data.forEach(item => {
         const [year, monthStr] = item.label.split('-');
@@ -134,6 +132,8 @@ const EmployeeDashboard = () => {
         return <ChangePassword />;
       case 'grantedPermissions':
         return <EmployeeGrantedPermission employeeId={user.id} />;
+      case 'leaveApply':
+        return <LeaveApply />; // ✅ Render LeaveApply
       default:
         return (
           <div className="px-3">
@@ -174,6 +174,7 @@ const EmployeeDashboard = () => {
 
         <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveApply')}>📝 Apply for Leave</button> {/* ✅ NEW BUTTON */}
         <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
         <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>🚪 Logout</button>
@@ -193,56 +194,55 @@ const EmployeeDashboard = () => {
           border-right: 1px solid rgba(255,255,255,0.1);
         }
         .sidebar-btn {
-         
-background: linear-gradient(to right, #4b6cb7, #182848);
-color: white;
-border: none;
-padding: 10px 14px;
-margin-top: 10px;
-border-radius: 12px;
-font-weight: 600;
-text-align: left;
-transition: all 0.3s ease;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-.sidebar-btn:hover {
-background: linear-gradient(to right, #43cea2, #185a9d);
-transform: translateX(4px);
-box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-}
-.logout-btn:hover {
-transform: scale(1.05);
-}
-.welcome-card {
-background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
-border-left: 4px solid #00e6e6;
-}
-.charts-container {
-display: grid;
-grid-template-columns: 1fr;
-gap: 24px;
-}
-@media (min-width: 768px) {
-.charts-container {
-grid-template-columns: repeat(2, 1fr);
-}
-}
-.chart-card {
-background-color: rgba(255, 255, 255, 0.05);
-border-radius: 16px;
-backdrop-filter: blur(8px);
-transition: transform 0.3s ease;
-}
-.chart-card:hover {
-transform: translateY(-5px);
-}
-.chart-title {
-color: #00e6e6;
-font-weight: 600;
-}
-`}</style>
-</div>
-);
+          background: linear-gradient(to right, #4b6cb7, #182848);
+          color: white;
+          border: none;
+          padding: 10px 14px;
+          margin-top: 10px;
+          border-radius: 12px;
+          font-weight: 600;
+          text-align: left;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .sidebar-btn:hover {
+          background: linear-gradient(to right, #43cea2, #185a9d);
+          transform: translateX(4px);
+          box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        .logout-btn:hover {
+          transform: scale(1.05);
+        }
+        .welcome-card {
+          background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
+          border-left: 4px solid #00e6e6;
+        }
+        .charts-container {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+        @media (min-width: 768px) {
+          .charts-container {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        .chart-card {
+          background-color: rgba(255, 255, 255, 0.05);
+          border-radius: 16px;
+          backdrop-filter: blur(8px);
+          transition: transform 0.3s ease;
+        }
+        .chart-card:hover {
+          transform: translateY(-5px);
+        }
+        .chart-title {
+          color: #00e6e6;
+          font-weight: 600;
+        }
+      `}</style>
+    </div>
+  );
 };
 
 export default EmployeeDashboard;
