@@ -13,12 +13,8 @@ const LeaveApply = () => {
   });
 
   const [leaveStats, setLeaveStats] = useState({
-    EL: 0,
-    CL: 0,
-    SL: 0,
-    LWP: 0,
-    total_taken: 0,
-    total_present: 0,
+    total_leaves_taken: 0,
+    total_leaves_present: 0,
   });
 
   const [noOfDays, setNoOfDays] = useState('');
@@ -37,12 +33,8 @@ const LeaveApply = () => {
         .then((res) => {
           const data = res.data;
           setLeaveStats({
-            EL: data.el_remaining,
-            CL: data.cl_remaining,
-            SL: data.sl_remaining,
-            LWP: data.lwp_remaining,
-            total_taken: data.total_unpaid_leave,
-            total_present: data.total_lwp,
+            total_leaves_taken: data.total_leaves_taken,
+            total_leaves_present: data.total_leaves_present,
           });
         })
         .catch((err) => {
@@ -86,31 +78,13 @@ const LeaveApply = () => {
   };
 
   return (
-    <div className="leave-bg px-3 pt-3" style={{ height: '100vh' }}>
-      <div className="text-white text-center mb-3">
-        <h6 className="fw-bold mb-3">Leave Balance</h6>
-        <div className="d-flex justify-content-center flex-wrap gap-4">
-          {['EL', 'CL', 'SL', 'LWP'].map((type) => (
-            <div key={type} style={circleStyle}>
-              <div style={{ fontSize: '1rem', fontWeight: '600' }}>{type}</div>
-              <div style={{ fontSize: '26px', fontWeight: 'bold' }}>{leaveStats[type]}</div>
-              <div style={{ fontSize: '0.85rem' }}>Remaining</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="glass-card mx-auto p-3 rounded-4" style={{ maxWidth: '460px' }}>
-        <h6 className="text-center text-white mb-3 fw-bold">Apply Leave</h6>
+    <div className="leave-bg d-flex flex-column align-items-center justify-content-center px-3" style={{ minHeight: '100vh' }}>
+      <div className="glass-card p-4 rounded-4 w-100 shadow-lg" style={{ maxWidth: '460px' }}>
+        <h4 className="text-center text-white mb-4 fw-semibold">Apply for Leave</h4>
         <form onSubmit={handleSubmit}>
-          {/* Hidden Employee Name */}
-          <input
-            type="hidden"
-            name="employee_name"
-            value={leaveData.employee_name}
-          />
+          <input type="hidden" name="employee_name" value={leaveData.employee_name} />
 
-          <div className="d-flex gap-2 mb-2">
+          <div className="d-flex gap-2 mb-3">
             <div className="w-50">
               <label className="form-label text-white small">Employee ID</label>
               <input
@@ -118,7 +92,7 @@ const LeaveApply = () => {
                 name="employee_id"
                 value={leaveData.employee_id}
                 readOnly
-                className="form-control rounded-3 border-0 small bg-light"
+                className="form-control rounded-3 border-0 bg-light small"
               />
             </div>
             <div className="w-50">
@@ -131,16 +105,15 @@ const LeaveApply = () => {
                 required
               >
                 <option value="">-- Select --</option>
-                <option value="Earned Leave">Earned Leave</option>
-                <option value="Casual Leave">Casual Leave</option>
-                <option value="Sick Leave">Sick Leave</option>
-                <option value="Leave Without Pay">Leave Without Pay</option>
+                <option value="EL">Earned Leave</option>
+                <option value="CL">Casual Leave</option>
+                <option value="SL">Sick Leave</option>
+                <option value="LWP">Leave Without Pay</option>
               </select>
             </div>
-
           </div>
 
-          <div className="d-flex gap-2 mb-2">
+          <div className="d-flex gap-2 mb-3">
             <div className="w-50">
               <label className="form-label text-white small">From</label>
               <input
@@ -166,12 +139,12 @@ const LeaveApply = () => {
           </div>
 
           {noOfDays && (
-            <div className="text-success small mb-2">
-              Days: <strong>{noOfDays}</strong>
+            <div className="text-success small mb-3 text-center">
+              Days Applied: <strong>{noOfDays}</strong>
             </div>
           )}
 
-          <div className="mb-2">
+          <div className="mb-3">
             <label className="form-label text-white small">Reason</label>
             <textarea
               name="reason"
@@ -183,62 +156,65 @@ const LeaveApply = () => {
             />
           </div>
 
-          <button type="submit" className="btn btn-light fw-bold w-100 rounded-3 small">
-            Submit
+          <button type="submit" className="btn btn-outline-light fw-bold w-100 rounded-3 small">
+            Submit Application
           </button>
 
           {message && (
-            <div className={`text-center mt-2 small fw-semibold ${message.startsWith('✅') ? 'text-success' : 'text-danger'}`}>
+            <div className={`text-center mt-3 small fw-semibold ${message.startsWith('✅') ? 'text-success' : 'text-danger'}`}>
               {message}
             </div>
           )}
         </form>
       </div>
 
-      <div className="text-white text-center mt-3 d-flex justify-content-center gap-3 flex-wrap">
-        <div className="bg-light text-dark rounded-3 py-1 px-3 shadow-sm">
-          <strong>Total Unpaid Leave:</strong> {leaveStats.total_taken}
+      {/* Summary Cards */}
+      <div className="text-white text-center mt-5 d-flex justify-content-center gap-4 flex-wrap">
+        <div className="summary-card bg-gradient-green text-white rounded-4 py-3 px-4 shadow">
+          <div className="small text-uppercase mb-1">Total Leaves Present</div>
+          <h5 className="fw-bold mb-0">{leaveStats.total_leaves_present}</h5>
         </div>
-        <div className="bg-light text-dark rounded-3 py-1 px-3 shadow-sm">
-          <strong>Total Lwp:</strong> {leaveStats.total_present}
+        <div className="summary-card bg-gradient-yellow text-dark rounded-4 py-3 px-4 shadow">
+          <div className="small text-uppercase mb-1">Total Leaves Taken</div>
+          <h5 className="fw-bold mb-0">{leaveStats.total_leaves_taken}</h5>
         </div>
       </div>
 
+      {/* Styling */}
       <style>{`
         .leave-bg {
-          background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
+          background: linear-gradient(to right, #141e30, #243b55);
         }
         .glass-card {
-          background: rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(12px);
-          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.06);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
         }
         .small {
-          font-size: 0.83rem;
+          font-size: 0.84rem;
+        }
+        .summary-card {
+          min-width: 180px;
+          transition: transform 0.3s;
+        }
+        .summary-card:hover {
+          transform: scale(1.05);
+        }
+        .bg-gradient-green {
+          background: linear-gradient(to right, #56ab2f, #a8e063);
+        }
+        .bg-gradient-yellow {
+          background: linear-gradient(to right, #f7971e, #ffd200);
+        }
+        .form-control:focus, .form-select:focus {
+          box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+        }
+        button:focus {
+          box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
         }
       `}</style>
     </div>
   );
-};
-
-const circleStyle = {
-  width: '120px',
-  height: '120px',
-  borderRadius: '50%',
-  backgroundColor: 'rgba(255,255,255,0.15)',
-  backdropFilter: 'blur(10px)',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
-  color: '#fff',
-  fontSize: '15px',
 };
 
 export default LeaveApply;

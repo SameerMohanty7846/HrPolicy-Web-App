@@ -48,6 +48,7 @@ import {
 
 import {
   getAllLeaveApplications,
+  getLeaveSummaryByEmployeeId,
   submitLeaveApplication,
   updateLeaveStatus,
 } from "../controller/leave.controller.js";
@@ -105,6 +106,7 @@ router.get("/leave/applications", getAllLeaveApplications);
 
 // Update leave status (approve/reject)
 router.patch("/leave/applications/:application_id/status", updateLeaveStatus);
+router.get('/summary/:employee_id', getLeaveSummaryByEmployeeId);
 
 // ================= 🛡️ HR LEAVE POLICY =================
 router.post("/hr-leave-policy", addLeavePolicy);

@@ -168,4 +168,27 @@ export const updateLeaveStatus = (req, res) => {
 
 
 //controller to get status of the summary for tha apply page
+export const getLeaveSummaryByEmployeeId = (req, res) => {
+  const { employee_id } = req.params;
 
+  const query = `
+    SELECT 
+      total_leaves_present,
+      total_leaves_taken
+    FROM employee_leave_summary
+    WHERE employee_id = ?
+  `;
+
+  db.query(query, [employee_id], (err, results) => {
+    if (err) {
+      console.error("[getLeaveSummaryByEmployeeId] DB error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "No summary found for this employee" });
+    }
+
+    res.status(200).json(results[0]);
+  });
+};
