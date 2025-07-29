@@ -131,12 +131,13 @@ const LeaveApply = () => {
                 required
               >
                 <option value="">-- Select --</option>
-                <option value="EL">Earned Leave</option>
-                <option value="CL">Casual Leave</option>
-                <option value="SL">Sick Leave</option>
-                <option value="LWP">Leave Without Pay</option>
+                <option value="Earned Leave">Earned Leave</option>
+                <option value="Casual Leave">Casual Leave</option>
+                <option value="Sick Leave">Sick Leave</option>
+                <option value="Leave Without Pay">Leave Without Pay</option>
               </select>
             </div>
+
           </div>
 
           <div className="d-flex gap-2 mb-2">

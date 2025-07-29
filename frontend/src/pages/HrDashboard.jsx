@@ -12,7 +12,8 @@ import AssignTask from './AssignTask';
 import TaskManagement from './TaskManagement';
 import ChangePassword from './ChangePassword';
 import EmployeeGrantedPermission from './EmployeeGrantedPermission';
-import HrLeavePolicy from './HrLeavePolicy'; // ✅ New Import
+import HrLeavePolicy from './HrLeavePolicy';
+import LeaveApplication from './LeaveApplication'; // ✅ Newly added
 
 import {
   BarChart,
@@ -29,7 +30,6 @@ const HrDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeComponent, setActiveComponent] = useState('home');
-
   const [dailyData, setDailyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,6 @@ const HrDashboard = () => {
 
   const RatingChart = ({ data, xKey, title }) => {
     const isWeekly = xKey === 'day';
-
     return (
       <div className="chart-card p-4 shadow rounded mb-4">
         <h5 className="chart-title mb-3">{title}</h5>
@@ -134,7 +133,7 @@ const HrDashboard = () => {
       case 'hrPolicy':
         return <HrPolicy />;
       case 'leavePolicy':
-        return <HrLeavePolicy />; // ✅ Leave Policy component
+        return <HrLeavePolicy />;
       case 'assignTask':
         return <AssignTask />;
       case 'taskManagement':
@@ -143,6 +142,8 @@ const HrDashboard = () => {
         return <ChangePassword />;
       case 'grantedPermissions':
         return <EmployeeGrantedPermission employeeId={user.id} />;
+      case 'leaveApplications':
+        return <LeaveApplication />; // ✅ Newly added case
       default:
         return (
           <div className="px-3">
@@ -179,14 +180,14 @@ const HrDashboard = () => {
             <div className="text-capitalize">{user.role}</div>
           </div>
         )}
-
         <button className="sidebar-btn" onClick={() => setActiveComponent('addEmployee')}>➕ Add Employee</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('viewEmployees')}>👥 View Employees</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('hrPolicy')}>📜 HR Policy</button>
-        <button className="sidebar-btn" onClick={() => setActiveComponent('leavePolicy')}>📘 Leave Policy</button> {/* ✅ New Sidebar Option */}
+        <button className="sidebar-btn" onClick={() => setActiveComponent('leavePolicy')}>📘 Leave Policy</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveApplications')}>📄 Leave Applications</button> {/* ✅ NEW */}
         <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
         <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>🚪 Logout</button>
       </div>
