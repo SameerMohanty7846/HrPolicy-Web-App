@@ -1,152 +1,3 @@
-CREATE TABLE employees (
-    emp_id INT PRIMARY KEY,
-    name VARCHAR(100),
-    department VARCHAR(50),
-    salary DECIMAL(10, 2),
-    hire_date DATE,
-    experience INT,
-    active_status BOOLEAN
-);
-INSERT INTO employees (emp_id, name, department, salary, hire_date, experience, active_status) VALUES
-(1, 'Alice',     'HR',        50000.00, '2019-01-15', 5, TRUE),
-(2, 'Bob',       'IT',        70000.00, '2020-03-20', 4, TRUE),
-(3, 'Charlie',   'Finance',   65000.00, '2018-11-05', 6, FALSE),
-(4, 'David',     'Marketing', 55000.00, '2021-06-10', 3, TRUE),
-(5, 'Eve',       'IT',        75000.00, '2017-08-01', 7, TRUE),
-(6, 'Frank',     'HR',        48000.00, '2022-02-14', 2, FALSE),
-(7, 'Grace',     'Finance',   67000.00, '2016-09-25', 8, TRUE),
-(8, 'Heidi',     'Marketing', 52000.00, '2023-01-01', 1, TRUE),
-(9, 'Ivan',      'IT',        80000.00, '2015-05-30', 9, FALSE),
-(10,'Judy',      'Finance',   60000.00, '2020-12-12', 4, TRUE);
-
-
-
-
-
-SELECT * FROM employees;
-SELECT   distinct department FROM employees;
-
--- operators and where clause
-SELECT * FROM employees;
-SELECT * FROM employees WHERE experience>5;
-SELECT * FROM employees WHERE active_status=0;
-SELECT * FROM employees WHERE salary>10000 AND salary<50000;
-SELECT * FROM employees WHERE salary BETWEEN 10000 AND 50000;
-SELECT * FROM employees WHERE  department IN ('HR','IT');
-SELECT * FROM employees WHERE name LIKE 'A%';
-SELECT * FROM employees WHERE name IS NULL;
-SELECT * FROM employees WHERE name IS NOT NULL;
-
-SET @x=20;
-SELECT @x as data ;
-SELECT CONCAT('  NAME  ',name) AS DATA  FROM employees;
-
--- AGGREGATE FUNCTION-- 
-SELECT * FROM employees;
-SELECT COUNT(*) as TOTAL_EMP FROM employees;
-SELECT COUNT(name) as TOTAL_NAME FROM employees;
-SELECT MAX(salary) as MAX_SAL FROM employees;
-SELECT MIN(salary) as MIN_SAL FROM employees;
-SELECT AVG(salary) as AVG_SAL FROM employees;
-SELECT SUM(salary) as TOTAL_SALARY FROM employees;
-
-
-
-
-
-
--- ORDER BY CLAUSE
-SELECT * FROM employees;
-SELECT * FROM employees ORDER BY department;
-SELECT * FROM employees ORDER BY experience DESC;
-SELECT * FROM employees ORDER BY salary DESC;
-
-
--- GROUP BY
-SELECT department,MAX(salary) as MAX_SAL FROM employees GROUP BY department ORDER BY MAX_SAL DESC;
-SELECT department,AVG(salary) as AVG_SAL FROM employees GROUP BY department;
-
-
--- HAVING
-SELECT department,COUNT(*) as TOTAL_EMP,MAX(salary) as MAX_SAL FROM employees WHERE TOTAL_EMP=2   GROUP BY department HAVING MAX_SAL <60000;
-SELECT department,COUNT(*) as TOTAL_EMP,AVG(salary) as AVG_SAL FROM employees GROUP BY department HAVING AVG_SAL >50000;
-
-show tables;
-USE mysqlpractice;
-
-show databases;
-create database mern_stack;
-use mern_stack;
-
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(100)
-);
-INSERT INTO users (name, email) VALUES
-('Alok Kumar', 'alok@example.com'),
-('Binod Das', 'binod@example.com'),
-('Rakesh Sharma', 'rakesh@example.com'),
-('Sameer Mohanty', 'sameer@example.com');
-
-select * from students;
-insert into students(name,email)
-values
-('alok','alok123@gmail.com');
-desc students;
-select * from users;
-show tables;
-
-
-CREATE TABLE employees (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100),
-  email VARCHAR(100),
-  position VARCHAR(100)
-);
-insert into employees(name,email,position)
-value
-('hr','hr@gmail.com','HR');
-select * from employees;
-show databases;
-
-
-
-show databases;
-
-
-
-
-drop database auth_db
-CREATE DATABASE auth_db;
-USE auth_db;
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL
-);
-select * from users;
-
--- related to authentication starts
-show databases;
-create database user;
-drop database user;
-use user;
-drop table users;
-create table users(
-id int primary key auto_increment,
-name varchar(30) NOT NULL,
-email varchar(30) NOT NULL,
-password varchar(255) NOT NULL
-);
-select * from users;
-
-
-
-
-
-
 
 -- ======================
 -- TESTING FOR HR POLICY
@@ -304,6 +155,72 @@ CREATE TABLE user_otps (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL
 );
+-- ==========================
+-- Leave related tables
+CREATE TABLE leave_applications (
+  application_id INT AUTO_INCREMENT PRIMARY KEY,
+  employee_id INT NOT NULL,
+  employee_name VARCHAR(50) NOT NULL,
+  leave_type VARCHAR(50), -- Earned, Casual, Sick
+  from_date DATE NOT NULL,
+  to_date DATE NOT NULL,
+  no_of_days INT GENERATED ALWAYS AS (DATEDIFF(to_date, from_date) + 1) STORED,
+  reason TEXT,
+  status VARCHAR(20) DEFAULT 'Pending', -- Pending, Approved, Rejected
+  applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+);
+
+CREATE TABLE employee_leave_summary (
+  employee_id INT PRIMARY KEY,
+  employee_name VARCHAR(50),
+
+  total_earned_leave INT,
+  earned_leave_taken INT DEFAULT 0,
+
+  total_casual_leave INT,
+  casual_leave_taken INT DEFAULT 0,
+
+  total_sick_leave INT,
+  sick_leave_taken INT DEFAULT 0,
+
+  total_lwp_leave INT,               -- 🆕 Optional cap on Leave Without Pay
+  lwp_leave_taken INT DEFAULT 0,     -- 🆕 Actual Leave Without Pay taken
+
+  total_leaves_present INT GENERATED ALWAYS AS (
+    total_earned_leave + total_casual_leave + total_sick_leave
+  ) STORED,
+
+  total_leaves_taken INT GENERATED ALWAYS AS (
+    earned_leave_taken + casual_leave_taken + sick_leave_taken
+  ) STORED,
+
+  total_leaves_remaining INT GENERATED ALWAYS AS (
+    (total_earned_leave + total_casual_leave + total_sick_leave) -
+    (earned_leave_taken + casual_leave_taken + sick_leave_taken)
+  ) STORED,
+
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+);
+
+-- hr policy for leave-- 
+-- Step 1: Create the table
+CREATE TABLE hr_leave_policy (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  leave_type VARCHAR(50) NOT NULL,
+  allowed_days INT NOT NULL
+);
+-- Step 2: Insert leave policy data
+INSERT INTO hr_leave_policy (leave_type, allowed_days)
+VALUES
+('Earned Leave (EL)', 18),
+('Casual Leave (CL)', 8),
+('Sick Leave (SL)', 8),
+('Leave Without Pay (LWP)', 10);
+
+
+
+
 
 
 
@@ -320,6 +237,13 @@ SELECT * FROM users;
 SELECT * FROM AccessInfo;
 SELECT * FROM EmployeePermission;
 SELECT * FROM user_otps;
+SELECT * FROM leave_applications;
+SELECT * FROM employee_leave_summary;
+SELECT * FROM hr_leave_policy;
+
+
+
+
 
 
 -- AVERAGE RATING
@@ -337,6 +261,8 @@ DROP TABLE IF EXISTS performance_levels;
 DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS employee_increments;
 DROP TABLE IF EXISTS employees;
+DROP TABLE IF EXISTS employee_leave_summary;
+
 
 
 
