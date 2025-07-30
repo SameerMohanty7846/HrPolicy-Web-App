@@ -39,11 +39,10 @@ import {
   getYearlyEmployeeRatings,
 } from "../controller/analytics.controller.js";
 
-// 📝 LEAVE CONTROLLERS
+// 📝 LEAVE POLICY CONTROLLERS
 import {
   addLeavePolicy,
-  getAllLeavePolicies,
-  deleteLeavePolicy,
+getLeaveTypeNames,  deleteLeavePolicy,getAllLeavePolicies
 } from "../controller/hr.leave.policy.controller.js";
 
 import {
@@ -109,8 +108,11 @@ router.patch("/leave/applications/:application_id/status", updateLeaveStatus);
 router.get('/summary/:employee_id', getLeaveSummaryByEmployeeId);
 
 // ================= 🛡️ HR LEAVE POLICY =================
-router.post("/hr-leave-policy", addLeavePolicy);
-router.get("/hr-leave-policy", getAllLeavePolicies);
-router.delete("/hr-leave-policy/:id", deleteLeavePolicy);
+// 🛡️ HR LEAVE POLICY ROUTES
+router.post("/hr-leave-policy", addLeavePolicy);             // Add new policy
+router.get("/hr-leave-policy", getAllLeavePolicies);         // ✅ Fetch all policies
+router.get("/leave/type-names", getLeaveTypeNames);          // Get type names only (for dropdowns)
+router.delete("/hr-leave-policy/:id", deleteLeavePolicy);    // Delete by ID
+
 
 export default router;

@@ -3,21 +3,21 @@
 import db from '../config/db.js';  // Adjust import as per your setup
 
 export const submitLeaveApplication = (req, res) => {
-  const { employee_id, employee_name, leave_type, from_date, to_date, reason } = req.body;
+  const { employee_id, employee_name, leave_type, from_date, to_date, reason, no_of_days } = req.body;
 
-  if (!employee_id || !employee_name || !from_date || !to_date) {
+  if (!employee_id || !employee_name || !from_date || !to_date || !no_of_days) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
   const query = `
     INSERT INTO leave_applications 
-    (employee_id, employee_name, leave_type, from_date, to_date, reason) 
-    VALUES (?, ?, ?, ?, ?, ?)
+    (employee_id, employee_name, leave_type, from_date, to_date, reason, no_of_days) 
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(
     query,
-    [employee_id, employee_name, leave_type, from_date, to_date, reason],
+    [employee_id, employee_name, leave_type, from_date, to_date, reason, no_of_days],
     (err, result) => {
       if (err) {
         console.error('[submitLeaveApplication] Error:', err);
@@ -30,6 +30,7 @@ export const submitLeaveApplication = (req, res) => {
     }
   );
 };
+
 
 export const getAllLeaveApplications = (req, res) => {
   const query = `

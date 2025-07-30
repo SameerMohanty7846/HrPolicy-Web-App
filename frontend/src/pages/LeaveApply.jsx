@@ -12,11 +12,7 @@ const LeaveApply = () => {
     reason: '',
   });
 
-  const [leaveStats, setLeaveStats] = useState({
-    total_leaves_taken: 0,
-    total_leaves_present: 0,
-  });
-
+  const [leaveTypes, setLeaveTypes] = useState([]);
   const [noOfDays, setNoOfDays] = useState('');
   const [message, setMessage] = useState('');
 
@@ -28,31 +24,38 @@ const LeaveApply = () => {
         employee_id: storedUser.id,
         employee_name: storedUser.name,
       }));
-
-      axios.get(`http://localhost:2000/api/summary/${storedUser.id}`)
-        .then((res) => {
-          const data = res.data;
-          setLeaveStats({
-            total_leaves_taken: data.total_leaves_taken,
-            total_leaves_present: data.total_leaves_present,
-          });
-        })
-        .catch((err) => {
-          console.error("Failed to fetch leave summary:", err);
-        });
     }
+
+    // Fetch leave types dynamically
+    axios.get('http://localhost:2000/api/leave/type-names')
+      .then(res => setLeaveTypes(res.data))
+      .catch(err => console.error('Error fetching leave types:', err));
   }, []);
+
+  const calculateDaysExcludingSundays = (fromDate, toDate) => {
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    let count = 0;
+
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+      if (d.getDay() !== 0) { // 0 = Sunday
+        count++;
+      }
+    }
+
+    return count;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setLeaveData({ ...leaveData, [name]: value });
+    const updatedData = { ...leaveData, [name]: value };
+    setLeaveData(updatedData);
 
     if (name === 'to_date' || name === 'from_date') {
-      const from = name === 'from_date' ? new Date(value) : new Date(leaveData.from_date);
-      const to = name === 'to_date' ? new Date(value) : new Date(leaveData.to_date);
-      if (from && to && from <= to) {
-        const diff = Math.ceil((to - from) / (1000 * 60 * 60 * 24)) + 1;
-        setNoOfDays(diff);
+      const { from_date, to_date } = updatedData;
+      if (from_date && to_date && new Date(from_date) <= new Date(to_date)) {
+        const days = calculateDaysExcludingSundays(from_date, to_date);
+        setNoOfDays(days);
       } else {
         setNoOfDays('');
       }
@@ -64,11 +67,18 @@ const LeaveApply = () => {
     setMessage('');
 
     try {
-      const res = await axios.post('http://localhost:2000/api/leave/apply', leaveData);
+      const payload = { ...leaveData, no_of_days: noOfDays };
 
+      const res = await axios.post('http://localhost:2000/api/leave/apply', payload);
       if (res.status === 201) {
-        setMessage('✅ Leave submitted successfully!');
-        setLeaveData({ ...leaveData, leave_type: '', from_date: '', to_date: '', reason: '' });
+        setMessage('✅ Your leave application has been successfully submitted!');
+        setLeaveData({
+          ...leaveData,
+          leave_type: '',
+          from_date: '',
+          to_date: '',
+          reason: ''
+        });
         setNoOfDays('');
       }
     } catch (error) {
@@ -105,10 +115,11 @@ const LeaveApply = () => {
                 required
               >
                 <option value="">-- Select --</option>
-                <option value="EL">Earned Leave</option>
-                <option value="CL">Casual Leave</option>
-                <option value="SL">Sick Leave</option>
-                <option value="LWP">Leave Without Pay</option>
+                {leaveTypes.map((leave, index) => (
+                  <option key={index} value={leave}>
+                    {leave}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -139,8 +150,10 @@ const LeaveApply = () => {
           </div>
 
           {noOfDays && (
-            <div className="text-success small mb-3 text-center">
-              Days Applied: <strong>{noOfDays}</strong>
+            <div className="text-center mb-3">
+              <div className="alert alert-info py-2 px-3 small mb-0" role="alert">
+                📆 <strong>{noOfDays}</strong> day(s) applied (excluding Sundays)
+              </div>
             </div>
           )}
 
@@ -161,26 +174,15 @@ const LeaveApply = () => {
           </button>
 
           {message && (
-            <div className={`text-center mt-3 small fw-semibold ${message.startsWith('✅') ? 'text-success' : 'text-danger'}`}>
-              {message}
+            <div className="text-center mt-3">
+              <div className={`alert small py-2 px-3 mb-0 ${message.startsWith('✅') ? 'alert-success' : 'alert-danger'}`} role="alert">
+                {message}
+              </div>
             </div>
           )}
         </form>
       </div>
 
-      {/* Summary Cards */}
-      <div className="text-white text-center mt-5 d-flex justify-content-center gap-4 flex-wrap">
-        <div className="summary-card bg-gradient-green text-white rounded-4 py-3 px-4 shadow">
-          <div className="small text-uppercase mb-1">Total Leaves Present</div>
-          <h5 className="fw-bold mb-0">{leaveStats.total_leaves_present}</h5>
-        </div>
-        <div className="summary-card bg-gradient-yellow text-dark rounded-4 py-3 px-4 shadow">
-          <div className="small text-uppercase mb-1">Total Leaves Taken</div>
-          <h5 className="fw-bold mb-0">{leaveStats.total_leaves_taken}</h5>
-        </div>
-      </div>
-
-      {/* Styling */}
       <style>{`
         .leave-bg {
           background: linear-gradient(to right, #141e30, #243b55);
@@ -192,19 +194,6 @@ const LeaveApply = () => {
         }
         .small {
           font-size: 0.84rem;
-        }
-        .summary-card {
-          min-width: 180px;
-          transition: transform 0.3s;
-        }
-        .summary-card:hover {
-          transform: scale(1.05);
-        }
-        .bg-gradient-green {
-          background: linear-gradient(to right, #56ab2f, #a8e063);
-        }
-        .bg-gradient-yellow {
-          background: linear-gradient(to right, #f7971e, #ffd200);
         }
         .form-control:focus, .form-select:focus {
           box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);

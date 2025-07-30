@@ -156,7 +156,7 @@ CREATE TABLE user_otps (
     expires_at DATETIME NOT NULL
 );
 -- ==========================
--- Leave related tables
+-- Updated leave_applications table
 CREATE TABLE leave_applications (
   application_id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id INT NOT NULL,
@@ -164,52 +164,36 @@ CREATE TABLE leave_applications (
   leave_type VARCHAR(50), -- Earned, Casual, Sick
   from_date DATE NOT NULL,
   to_date DATE NOT NULL,
-  no_of_days INT GENERATED ALWAYS AS (DATEDIFF(to_date, from_date) + 1) STORED,
+  no_of_days INT NOT NULL, -- ✅ Will be passed from frontend
   reason TEXT,
   status VARCHAR(20) DEFAULT 'Pending', -- Pending, Approved, Rejected
   applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
 
-CREATE TABLE employee_leave_summary (
-  employee_id INT PRIMARY KEY,
-  employee_name VARCHAR(50),
-
-  total_earned_leave INT,
-  earned_leave_taken INT DEFAULT 0,
-
-  total_casual_leave INT,
-  casual_leave_taken INT DEFAULT 0,
-
-  total_sick_leave INT,
-  sick_leave_taken INT DEFAULT 0,
-
-  total_lwp_leave INT,               -- 🆕 Optional cap on Leave Without Pay
-  lwp_leave_taken INT DEFAULT 0,     -- 🆕 Actual Leave Without Pay taken
-
-  total_leaves_present INT GENERATED ALWAYS AS (
-    total_earned_leave + total_casual_leave + total_sick_leave
-  ) STORED,
-
-  total_leaves_taken INT GENERATED ALWAYS AS (
-    earned_leave_taken + casual_leave_taken + sick_leave_taken
-  ) STORED,
-
-  total_leaves_remaining INT GENERATED ALWAYS AS (
-    (total_earned_leave + total_casual_leave + total_sick_leave) -
-    (earned_leave_taken + casual_leave_taken + sick_leave_taken)
-  ) STORED,
-
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+CREATE TABLE hr_leave_policy (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  leave_type VARCHAR(50) NOT NULL UNIQUE,  -- e.g., Earned, Casual, Sick, etc.
+  allowed_days INT NOT NULL                -- Default allowed days for all employees
 );
+
+CREATE TABLE employee_leave_summary (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  employee_id INT NOT NULL,
+  leave_type VARCHAR(50) NOT NULL,
+  allowed_days INT NOT NULL,
+  taken_days INT DEFAULT 0,
+
+  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+  FOREIGN KEY (leave_type) REFERENCES hr_leave_policy(leave_type) ON DELETE CASCADE,
+
+  UNIQUE (employee_id, leave_type)  -- Prevent duplicate leave_type per employee
+);
+
 
 -- hr policy for leave-- 
 -- Step 1: Create the table
-CREATE TABLE hr_leave_policy (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  leave_type VARCHAR(50) NOT NULL,
-  allowed_days INT NOT NULL
-);
+
 -- Step 2: Insert leave policy data
 INSERT INTO hr_leave_policy (leave_type, allowed_days)
 VALUES

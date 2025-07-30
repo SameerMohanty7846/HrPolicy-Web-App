@@ -59,25 +59,26 @@ export const registerEmployee = (req, res) => {
                 return res.status(500).send('Failed to fetch leave policy');
               }
 
-              let earnedLeave = 0, casualLeave = 0, sickLeave = 0, lwpLeave = 0;
+              if (leaveRows.length === 0) {
+                return res.status(400).send('No leave policies found');
+              }
 
-              leaveRows.forEach(row => {
-                const type = row.leave_type.toLowerCase();
-                if (type.includes("earned")) earnedLeave = row.allowed_days;
-                if (type.includes("casual")) casualLeave = row.allowed_days;
-                if (type.includes("sick")) sickLeave = row.allowed_days;
-                if (type.includes("lwp")) lwpLeave = row.allowed_days;
-              });
+              const leaveInserts = leaveRows.map(row => [
+                empId,
+                row.leave_type,
+                row.allowed_days,
+                0 // taken_days default
+              ]);
 
               const insertLeaveSQL = `
                 INSERT INTO employee_leave_summary 
-                (employee_id, employee_name, total_earned_leave, total_casual_leave, total_sick_leave, total_lwp_leave)
-                VALUES (?, ?, ?, ?, ?, ?)`;
+                (employee_id, leave_type, allowed_days, taken_days)
+                VALUES ?`;
 
-              db.query(insertLeaveSQL, [empId, name, earnedLeave, casualLeave, sickLeave, lwpLeave], (leaveInsertErr) => {
+              db.query(insertLeaveSQL, [leaveInserts], (leaveInsertErr) => {
                 if (leaveInsertErr) {
                   console.error('Error inserting leave summary:', leaveInsertErr);
-                  return res.status(500).send('Employee added, but leave summary failed');
+                  return res.status(500).send('Employee added, but leave summary insertion failed');
                 }
 
                 res.send('Employee, User, Permissions, Increment, Leave Summary added successfully');
@@ -146,9 +147,10 @@ export const registerEmployee = (req, res) => {
 };
 
 
+
 export const registerHR = (req, res) => {
   const { name, email, phone, salary, dateOfJoining, employeeType, experience } = req.body;
-  const department = 'HR'; // Set fixed department
+  const department = 'HR'; // Fixed department
   const preJoiningExperience = employeeType === 'Fresher' ? 0 : parseFloat(experience) || 0;
 
   const insertEmployeeSQL = `
@@ -202,26 +204,27 @@ export const registerHR = (req, res) => {
 
             db.query(leavePolicySQL, (leaveErr, leaveRows) => {
               if (leaveErr) {
-                console.error('Error fetching leave policy for HR:', leaveErr);
+                console.error('Error fetching leave policy:', leaveErr);
                 return res.status(500).send('HR added, but failed to fetch leave policy');
               }
 
-              let earnedLeave = 0, casualLeave = 0, sickLeave = 0, lwpLeave = 0;
+              if (leaveRows.length === 0) {
+                return res.status(400).send('No leave policies found');
+              }
 
-              leaveRows.forEach(row => {
-                const type = row.leave_type.toLowerCase();
-                if (type.includes("earned")) earnedLeave = row.allowed_days;
-                if (type.includes("casual")) casualLeave = row.allowed_days;
-                if (type.includes("sick")) sickLeave = row.allowed_days;
-                if (type.includes("lwp")) lwpLeave = row.allowed_days;
-              });
+              const leaveInserts = leaveRows.map(row => [
+                empId,
+                row.leave_type,
+                row.allowed_days,
+                0 // taken_days default
+              ]);
 
               const insertLeaveSQL = `
                 INSERT INTO employee_leave_summary 
-                (employee_id, employee_name, total_earned_leave, total_casual_leave, total_sick_leave, total_lwp_leave)
-                VALUES (?, ?, ?, ?, ?, ?)`;
+                (employee_id, leave_type, allowed_days, taken_days)
+                VALUES ?`;
 
-              db.query(insertLeaveSQL, [empId, name, earnedLeave, casualLeave, sickLeave, lwpLeave], (leaveInsertErr) => {
+              db.query(insertLeaveSQL, [leaveInserts], (leaveInsertErr) => {
                 if (leaveInsertErr) {
                   console.error('Error inserting HR leave summary:', leaveInsertErr);
                   return res.status(500).send('HR added, but leave summary failed');
@@ -291,6 +294,7 @@ export const registerHR = (req, res) => {
     });
   });
 };
+
 
 
 // --------- Get all Employees excluding the first record
