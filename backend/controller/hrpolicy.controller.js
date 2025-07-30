@@ -51,7 +51,7 @@ export const registerEmployee = (req, res) => {
           const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
 
           const insertLeaveSummary = () => {
-            const leavePolicySQL = `SELECT leave_type, allowed_days FROM hr_leave_policy`;
+            const leavePolicySQL = `SELECT leave_type, mode, total_leaves FROM hr_leave_policy`;
 
             db.query(leavePolicySQL, (leaveErr, leaveRows) => {
               if (leaveErr) {
@@ -66,13 +66,14 @@ export const registerEmployee = (req, res) => {
               const leaveInserts = leaveRows.map(row => [
                 empId,
                 row.leave_type,
-                row.allowed_days,
+                row.mode,
+                row.total_leaves,
                 0 // taken_days default
               ]);
 
               const insertLeaveSQL = `
                 INSERT INTO employee_leave_summary 
-                (employee_id, leave_type, allowed_days, taken_days)
+                (employee_id, leave_type, mode, total_leaves, taken_days)
                 VALUES ?`;
 
               db.query(insertLeaveSQL, [leaveInserts], (leaveInsertErr) => {
@@ -150,7 +151,7 @@ export const registerEmployee = (req, res) => {
 
 export const registerHR = (req, res) => {
   const { name, email, phone, salary, dateOfJoining, employeeType, experience } = req.body;
-  const department = 'HR'; // Fixed department
+  const department = 'HR';
   const preJoiningExperience = employeeType === 'Fresher' ? 0 : parseFloat(experience) || 0;
 
   const insertEmployeeSQL = `
@@ -191,7 +192,6 @@ export const registerHR = (req, res) => {
         db.query(insertPermissionSQL, [empId], (permErr) => {
           if (permErr) {
             console.error('Error inserting HR Permission:', permErr);
-            // Continue anyway
           }
 
           const joiningDate = new Date(dateOfJoining);
@@ -200,7 +200,7 @@ export const registerHR = (req, res) => {
           const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
 
           const insertLeaveSummary = () => {
-            const leavePolicySQL = `SELECT leave_type, allowed_days FROM hr_leave_policy`;
+            const leavePolicySQL = `SELECT leave_type, mode, total_leaves FROM hr_leave_policy`;
 
             db.query(leavePolicySQL, (leaveErr, leaveRows) => {
               if (leaveErr) {
@@ -215,13 +215,14 @@ export const registerHR = (req, res) => {
               const leaveInserts = leaveRows.map(row => [
                 empId,
                 row.leave_type,
-                row.allowed_days,
+                row.mode,
+                row.total_leaves,
                 0 // taken_days default
               ]);
 
               const insertLeaveSQL = `
                 INSERT INTO employee_leave_summary 
-                (employee_id, leave_type, allowed_days, taken_days)
+                (employee_id, leave_type, mode, total_leaves, taken_days)
                 VALUES ?`;
 
               db.query(insertLeaveSQL, [leaveInserts], (leaveInsertErr) => {
@@ -294,6 +295,7 @@ export const registerHR = (req, res) => {
     });
   });
 };
+
 
 
 

@@ -47,9 +47,9 @@ getLeaveTypeNames,  deleteLeavePolicy,getAllLeavePolicies
 
 import {
   getAllLeaveApplications,
-  getLeaveSummaryByEmployeeId,
-  submitLeaveApplication,
-  updateLeaveStatus,
+   getLeaveSummaryByEmployee,
+   submitLeaveApplication,
+  updateLeaveStatus,getLeaveApplicationsByEmployeeId,
 } from "../controller/leave.controller.js";
 
 const router = express.Router();
@@ -105,7 +105,8 @@ router.get("/leave/applications", getAllLeaveApplications);
 
 // Update leave status (approve/reject)
 router.patch("/leave/applications/:application_id/status", updateLeaveStatus);
-router.get('/summary/:employee_id', getLeaveSummaryByEmployeeId);
+router.get("/employee/leave-summary/:employee_id", getLeaveSummaryByEmployee);
+router.get('/employee/leave-applications/:employee_id', getLeaveApplicationsByEmployeeId);
 
 // ================= 🛡️ HR LEAVE POLICY =================
 // 🛡️ HR LEAVE POLICY ROUTES

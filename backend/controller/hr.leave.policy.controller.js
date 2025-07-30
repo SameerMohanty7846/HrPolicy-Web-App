@@ -1,24 +1,32 @@
 import db from '../config/db.js';
 
 // ✅ Add new leave policy
-// ✅ Add new leave policy with validation
 export const addLeavePolicy = (req, res) => {
-  const { leave_type, allowed_days } = req.body;
+  const {
+    leave_type,
+    mode,
+    frequency,
+    total_leaves,
+    max_per_request
+  } = req.body;
 
-  // 1. Input validation
-  if (!leave_type || allowed_days === undefined) {
-    return res.status(400).json({ error: 'Leave type and allowed days are required' });
+  // ✅ Simple validation
+  if (!leave_type || !mode || !frequency || total_leaves == null || max_per_request == null) {
+    return res.status(400).json({ error: 'All fields are required' });
   }
 
-  if (isNaN(allowed_days) || allowed_days < 0) {
-    return res.status(400).json({ error: 'Allowed days must be a valid non-negative number' });
+  if (
+    isNaN(total_leaves) || total_leaves <= 0 ||
+    isNaN(max_per_request) || max_per_request <= 0
+  ) {
+    return res.status(400).json({ error: 'Total leaves and max per request must be numbers greater than 0' });
   }
 
-  // 2. Prevent duplicate leave types
+  // ✅ Check for duplicate leave type
   const checkQuery = `SELECT * FROM hr_leave_policy WHERE leave_type = ?`;
   db.query(checkQuery, [leave_type], (checkErr, checkResult) => {
     if (checkErr) {
-      console.error('Error checking leave policy:', checkErr);
+      console.error('Error checking existing leave policy:', checkErr);
       return res.status(500).json({ error: 'Internal server error' });
     }
 
@@ -26,9 +34,14 @@ export const addLeavePolicy = (req, res) => {
       return res.status(409).json({ error: 'Leave type already exists' });
     }
 
-    // 3. Insert the new policy
-    const insertQuery = `INSERT INTO hr_leave_policy (leave_type, allowed_days) VALUES (?, ?)`;
-    db.query(insertQuery, [leave_type, allowed_days], (insertErr, result) => {
+    // ✅ Insert the new policy
+    const insertQuery = `
+      INSERT INTO hr_leave_policy 
+      (leave_type, mode, frequency, total_leaves, max_per_request) 
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    db.query(insertQuery, [leave_type, mode, frequency, total_leaves, max_per_request], (insertErr, result) => {
       if (insertErr) {
         console.error('Error inserting leave policy:', insertErr);
         return res.status(500).json({ error: 'Internal server error' });
@@ -38,6 +51,7 @@ export const addLeavePolicy = (req, res) => {
     });
   });
 };
+
 
 // ✅ Get all leave policies
 // ✅ Get only leave type names

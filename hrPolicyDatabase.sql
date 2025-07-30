@@ -173,22 +173,82 @@ CREATE TABLE leave_applications (
 
 CREATE TABLE hr_leave_policy (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  leave_type VARCHAR(50) NOT NULL UNIQUE,  -- e.g., Earned, Casual, Sick, etc.
-  allowed_days INT NOT NULL                -- Default allowed days for all employees
+  leave_type VARCHAR(50) NOT NULL UNIQUE,     -- e.g., Earned, Casual, Sick, etc.
+  mode ENUM('Paid', 'Free') NOT NULL,         -- 'Paid' = Salary paid, 'Free' = Unpaid leave
+  frequency ENUM('Monthly', 'Yearly') NOT NULL, -- How often the leave quota resets
+  total_leaves INT NOT NULL,                  -- Total allowed leaves in the given frequency
+  max_per_request INT NOT NULL                -- Maximum leaves allowed per application
 );
+
+
+
 
 CREATE TABLE employee_leave_summary (
   id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id INT NOT NULL,
+
   leave_type VARCHAR(50) NOT NULL,
-  allowed_days INT NOT NULL,
-  taken_days INT DEFAULT 0,
+  mode ENUM('Paid', 'Free') NOT NULL,
+  total_leaves INT NOT NULL,       -- Copied from hr_leave_policy.total_leaves
+  taken_days INT DEFAULT 0,        -- Updated as leave is taken
 
   FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-  FOREIGN KEY (leave_type) REFERENCES hr_leave_policy(leave_type) ON DELETE CASCADE,
 
-  UNIQUE (employee_id, leave_type)  -- Prevent duplicate leave_type per employee
+  UNIQUE (employee_id, leave_type)
 );
+-- for retrirving all the details of all employees about their leaves-- 
+SELECT 
+  e.id AS employee_id,
+  e.name AS employee_name,
+  els.leave_type,
+  els.total_leaves,
+  els.taken_days,
+  
+  -- Total Paid Leaves per Employee
+  SUM(CASE WHEN els.mode = 'Paid' THEN els.taken_days ELSE 0 END) 
+    OVER (PARTITION BY e.id) AS total_paid_leaves,
+
+  -- Total Unpaid Leaves per Employee
+  SUM(CASE WHEN els.mode = 'Free' THEN els.taken_days ELSE 0 END) 
+    OVER (PARTITION BY e.id) AS total_unpaid_leaves
+
+FROM 
+  employees e
+JOIN 
+  employee_leave_summary els ON e.id = els.employee_id
+ORDER BY 
+  e.id, els.leave_type;
+
+-- for retrirving for  a single employe  all the details of  about their leaves-- 
+SELECT 
+  e.id AS employee_id,
+  e.name AS employee_name,
+  els.leave_type,
+  els.total_leaves,
+  els.taken_days,
+  
+  -- Total Paid Leaves taken by the employee
+  (
+    SELECT SUM(taken_days)
+    FROM employee_leave_summary
+    WHERE employee_id = e.id AND mode = 'Paid'
+  ) AS total_paid_leaves,
+
+  -- Total Unpaid Leaves taken by the employee
+  (
+    SELECT SUM(taken_days)
+    FROM employee_leave_summary
+    WHERE employee_id = e.id AND mode = 'Free'
+  ) AS total_unpaid_leaves
+
+FROM 
+  employees e
+JOIN 
+  employee_leave_summary els ON e.id = els.employee_id
+WHERE 
+  e.id = 2;  -- Pass the specific employee ID here
+
+
 
 
 -- hr policy for leave-- 
@@ -246,6 +306,7 @@ DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS employee_increments;
 DROP TABLE IF EXISTS employees;
 DROP TABLE IF EXISTS employee_leave_summary;
+DROP TABLE IF EXISTS hr_leave_policy;
 
 
 

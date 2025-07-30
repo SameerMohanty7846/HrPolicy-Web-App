@@ -17,7 +17,8 @@ import AssignTask from './AssignTask';
 import TaskManagement from './TaskManagement';
 import ChangePassword from './ChangePassword';
 import EmployeeGrantedPermission from './EmployeeGrantedPermission';
-import LeaveApply from './LeaveApply'; // ✅ NEW IMPORT
+import LeaveApply from './LeaveApply';
+import EmployeeLeaveDashboard from './EmployeeLeaveDashboard'; // ✅ NEW IMPORT
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -133,7 +134,9 @@ const EmployeeDashboard = () => {
       case 'grantedPermissions':
         return <EmployeeGrantedPermission employeeId={user.id} />;
       case 'leaveApply':
-        return <LeaveApply />; // ✅ Render LeaveApply
+        return <LeaveApply />;
+      case 'leaveDashboard':
+        return <EmployeeLeaveDashboard employeeId={user.id} />; // ✅ NEW CASE
       default:
         return (
           <div className="px-3">
@@ -174,7 +177,8 @@ const EmployeeDashboard = () => {
 
         <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
-        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveApply')}>📝 Apply for Leave</button> {/* ✅ NEW BUTTON */}
+        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveApply')}>📝 Apply for Leave</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveDashboard')}>📊 Leave Dashboard</button> {/* ✅ NEW BUTTON */}
         <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
         <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>🚪 Logout</button>
