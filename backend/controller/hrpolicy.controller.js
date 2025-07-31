@@ -210,7 +210,7 @@ export const registerHR = (req, res) => {
           const totalExperience = +(preJoiningExperience + inCompanyExperience).toFixed(2);
 
           const insertLeaveSummary = () => {
-            const leavePolicySQL = `SELECT leave_type, mode, total_leaves FROM hr_leave_policy`;
+            const leavePolicySQL = `SELECT id, leave_type, mode, frequency, total_leaves, max_per_request FROM hr_leave_policy`;
 
             db.query(leavePolicySQL, (leaveErr, leaveRows) => {
               if (leaveErr) {
@@ -224,15 +224,18 @@ export const registerHR = (req, res) => {
 
               const leaveInserts = leaveRows.map(row => [
                 empId,
+                row.id,
                 row.leave_type,
                 row.mode,
+                row.frequency,
                 row.total_leaves,
+                row.max_per_request,
                 0 // taken_days default
               ]);
 
               const insertLeaveSQL = `
                 INSERT INTO employee_leave_summary 
-                (employee_id, leave_type, mode, total_leaves, taken_days)
+                (employee_id, policy_id, leave_type, mode, frequency, total_leaves, max_per_request, taken_days)
                 VALUES ?`;
 
               db.query(insertLeaveSQL, [leaveInserts], (leaveInsertErr) => {
