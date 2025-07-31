@@ -176,4 +176,40 @@ export const getLeaveSummaryByEmployee = (req, res) => {
 };
 
 
+//Get the Leave Application Details by the application id
+export const getLeaveApplicationById = (req, res) => {
+  const { applicationId } = req.params;
+
+  const query = `
+    SELECT 
+      application_id,
+      employee_id,
+      employee_name,
+      leave_type,
+      from_date,
+      to_date,
+      no_of_days,
+      reason,
+      status,
+      applied_date
+    FROM leave_applications
+    WHERE application_id = ?
+  `;
+
+  db.query(query, [applicationId], (err, results) => {
+    if (err) {
+      console.error('Error fetching leave application by ID:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Leave application not found' });
+    }
+
+    res.status(200).json(results[0]); // Send only the first matching record
+  });
+};
+
+
+
 

@@ -41,8 +41,7 @@ const App = () => {
         />
 
         {/* Changed to hyphen-separated path as requested */}
-        <Route path="/leave-application-detail/:id" element={<LeaveApplicationDetail />} />
-
+<Route path="/leave-application-detail/:applicationId" element={<LeaveApplicationDetail />} />
         <Route path="/admin/permission/:id" element={<PermissionComponent />} />
         <Route path="/employee/granted-permissions" element={<EmployeeGrantedPermission />} />
         <Route path="/employee/read" element={<EmployeeRead />} />
