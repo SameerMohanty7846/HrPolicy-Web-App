@@ -13,10 +13,13 @@ const LeaveApply = () => {
   });
 
   const [leaveTypes, setLeaveTypes] = useState([]);
+  const [leaveSummary, setLeaveSummary] = useState([]);
   const [noOfDays, setNoOfDays] = useState('');
   const [message, setMessage] = useState('');
   const [maxLimitExceeded, setMaxLimitExceeded] = useState(false);
+  const [remainingBalance, setRemainingBalance] = useState(null);
 
+  // Load user + leave types
   useEffect(() => {
     const storedUser = JSON.parse(sessionStorage.getItem('user'));
     if (storedUser) {
@@ -25,6 +28,11 @@ const LeaveApply = () => {
         employee_id: storedUser.id,
         employee_name: storedUser.name,
       }));
+
+      // Fetch leave summary for that employee
+      axios.get(`http://localhost:2000/api/employee/leave-summary/${storedUser.id}`)
+        .then(res => setLeaveSummary(res.data.summary || []))
+        .catch(err => console.error('Error fetching leave summary:', err));
     }
 
     axios.get('http://localhost:2000/api/leave/type-names')
@@ -36,8 +44,7 @@ const LeaveApply = () => {
     const from = new Date(fromDate);
     const to = new Date(toDate);
     const diffTime = Math.abs(to - from);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
   const handleChange = (e) => {
@@ -45,20 +52,30 @@ const LeaveApply = () => {
     const updatedData = { ...leaveData, [name]: value };
     setLeaveData(updatedData);
 
-    if (name === 'leave_type' || name === 'from_date' || name === 'to_date') {
+    // When leave_type, from_date, or to_date changes
+    if (['leave_type', 'from_date', 'to_date'].includes(name)) {
       const { leave_type, from_date, to_date } = {
         ...updatedData,
         [name]: value
       };
 
+      const selectedLeavePolicy = leaveTypes.find(lt => lt.leave_type === leave_type);
+      const summaryEntry = leaveSummary.find(s => s.leave_type === leave_type);
+
+      // Show leave balance info
+      if (summaryEntry) {
+        const remaining = summaryEntry.total_leaves - summaryEntry.taken_days;
+        setRemainingBalance({ total: summaryEntry.total_leaves, taken: summaryEntry.taken_days, remaining });
+      } else {
+        setRemainingBalance(null);
+      }
+
+      // Calculate no. of days and check max limit
       if (from_date && to_date && new Date(from_date) <= new Date(to_date)) {
         const days = calculateDays(from_date, to_date);
         setNoOfDays(days);
 
-        const selectedLeave = leaveTypes.find(
-          (lt) => lt.leave_type === leave_type
-        );
-        if (selectedLeave && days > selectedLeave.max_per_request) {
+        if (selectedLeavePolicy && days > selectedLeavePolicy.max_per_request) {
           setMaxLimitExceeded(true);
         } else {
           setMaxLimitExceeded(false);
@@ -75,15 +92,14 @@ const LeaveApply = () => {
     setMessage('');
 
     if (maxLimitExceeded) {
-      const selectedLeave = leaveTypes.find(lt => lt.leave_type === leaveData.leave_type);
-      const max = selectedLeave?.max_per_request || 0;
+      const max = leaveTypes.find(lt => lt.leave_type === leaveData.leave_type)?.max_per_request || 0;
       setMessage(`❌ You are exceeding the max allowed per request (${max} day(s) allowed), but form will still be submitted.`);
     }
 
     try {
       const payload = { ...leaveData, no_of_days: noOfDays };
-
       const res = await axios.post('http://localhost:2000/api/leave/apply', payload);
+
       if (res.status === 201) {
         setMessage('✅ Your leave application has been successfully submitted!');
         setLeaveData({
@@ -95,6 +111,7 @@ const LeaveApply = () => {
         });
         setNoOfDays('');
         setMaxLimitExceeded(false);
+        setRemainingBalance(null);
       }
     } catch (error) {
       console.error('Leave submission error:', error);
@@ -165,20 +182,26 @@ const LeaveApply = () => {
           </div>
 
           {noOfDays && (
-            <div className="text-center mb-3">
+            <div className="text-center mb-2">
               <div
                 className={`alert py-2 px-3 small mb-0 ${maxLimitExceeded ? 'alert-danger' : 'alert-info'}`}
-                role="alert"
               >
                 📆 <strong>{noOfDays}</strong> day(s) applied
                 {maxLimitExceeded && (
-                  <>
-                    {' '}– exceeds the maximum allowed for this leave type (
+                  <> – exceeds the allowed limit (
                     {
                       leaveTypes.find((lt) => lt.leave_type === leaveData.leave_type)?.max_per_request || 0
-                    } day(s) allowed).
+                    } day(s)).
                   </>
                 )}
+              </div>
+            </div>
+          )}
+
+          {remainingBalance && (
+            <div className="text-center mb-3">
+              <div className="alert alert-warning py-2 px-3 small mb-0">
+                🟢 You have <strong>{remainingBalance.remaining}</strong> out of <strong>{remainingBalance.total}</strong> leave(s) remaining.
               </div>
             </div>
           )}
@@ -204,7 +227,7 @@ const LeaveApply = () => {
 
           {message && (
             <div className="text-center mt-3">
-              <div className={`alert small py-2 px-3 mb-0 ${message.startsWith('✅') ? 'alert-success' : 'alert-danger'}`} role="alert">
+              <div className={`alert small py-2 px-3 mb-0 ${message.startsWith('✅') ? 'alert-success' : 'alert-danger'}`}>
                 {message}
               </div>
             </div>
