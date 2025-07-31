@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const LeaveApplication = () => {
   const [applications, setApplications] = useState([]);
-  const [loadingStates, setLoadingStates] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchApplications();
@@ -24,57 +25,10 @@ const LeaveApplication = () => {
     return date.toISOString().split('T')[0];
   };
 
-  const handleUpdateStatus = async (application_id, status) => {
-    setLoadingStates(prev => ({
-      ...prev,
-      [`${application_id}_${status}`]: true
-    }));
-    
-    try {
-      console.log('Updating status:', { application_id, status });
-      
-      const response = await axios.patch(
-        `http://localhost:2000/api/leave/applications/${application_id}/status`, 
-        {
-          status: status
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      console.log('Update response:', response.data);
-
-      setApplications((prevApps) =>
-        prevApps.map(app =>
-          app.application_id === application_id ? { ...app, status } : app
-        )
-      );
-
-      alert(`Leave application ${status.toLowerCase()} successfully!`);
-
-    } catch (error) {
-      console.error(`Failed to ${status.toLowerCase()} leave:`, error);
-      
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
-        alert(`Failed to ${status.toLowerCase()} leave application: ${error.response.data.error || 'Server error'}`);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-        alert('Network error: Unable to connect to server');
-      } else {
-        console.error('Error message:', error.message);
-        alert(`Failed to ${status.toLowerCase()} leave application: ${error.message}`);
-      }
-    } finally {
-      setLoadingStates(prev => ({
-        ...prev,
-        [`${application_id}_${status}`]: false
-      }));
-    }
+  const handleViewDetails = (applicationId) => {
+    // Navigate to detail view with just applicationId
+    // The detail component can fetch all necessary data using this ID
+    navigate(`/leave-application-detail/${applicationId}`)
   };
 
   return (
@@ -98,7 +52,7 @@ const LeaveApplication = () => {
                   <th className="text-nowrap">Reason</th>
                   <th className="text-nowrap">Applied</th>
                   <th className="text-nowrap">Status</th>
-                  <th className="text-nowrap">Actions</th>
+                  <th className="text-nowrap">View</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,6 +76,7 @@ const LeaveApplication = () => {
                           </div>
                           <div>
                             <div className="fw-medium">{app.employee_name}</div>
+                            <div className="small text-muted">ID: {app.employee_id}</div>
                           </div>
                         </div>
                       </td>
@@ -143,58 +98,24 @@ const LeaveApplication = () => {
                       <td className="text-nowrap text-muted small">{formatDate(app.applied_date)}</td>
                       <td>
                         <span
-                          className={`badge rounded-pill ${
-                            app.status === 'Pending'
+                          className={`badge rounded-pill ${app.status === 'Pending'
                               ? 'bg-warning text-dark'
                               : app.status === 'Approved'
-                              ? 'bg-success'
-                              : 'bg-danger'
-                          }`}
+                                ? 'bg-success'
+                                : 'bg-danger'
+                            }`}
                         >
                           {app.status}
                         </span>
                       </td>
-                      <td>
-                        {app.status === 'Pending' ? (
-                          <div className="d-flex gap-2">
-                            <button
-                              className="btn btn-sm btn-success flex-grow-1"
-                              onClick={() => handleUpdateStatus(app.application_id, 'Approved')}
-                              disabled={loadingStates[`${app.application_id}_Approved`]}
-                            >
-                              {loadingStates[`${app.application_id}_Approved`] ? (
-                                <>
-                                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                  Processing...
-                                </>
-                              ) : (
-                                <>
-                                  <i className="bi bi-check-circle me-1"></i>
-                                  Approve
-                                </>
-                              )}
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-danger flex-grow-1"
-                              onClick={() => handleUpdateStatus(app.application_id, 'Rejected')}
-                              disabled={loadingStates[`${app.application_id}_Rejected`]}
-                            >
-                              {loadingStates[`${app.application_id}_Rejected`] ? (
-                                <>
-                                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                  Processing...
-                                </>
-                              ) : (
-                                <>
-                                  <i className="bi bi-x-circle me-1"></i>
-                                  Reject
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-muted small">No actions</span>
-                        )}
+                      <td className="text-center">
+                        <button
+                          className="btn btn-sm btn-outline-primary rounded-circle"
+                          onClick={() => handleViewDetails(app.application_id)}
+                          title="View details"
+                        >
+                          <i className="bi bi-chevron-right"></i>
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -208,7 +129,7 @@ const LeaveApplication = () => {
             <div className="small text-muted">
               Showing <strong>{applications.length}</strong> applications
             </div>
-            <button 
+            <button
               className="btn btn-sm btn-outline-primary"
               onClick={fetchApplications}
             >

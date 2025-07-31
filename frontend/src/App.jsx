@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './components/Login';
-import ForgotPassword from './components/ForgotPassword';  // ✅ Import ForgotPassword
+import ForgotPassword from './components/ForgotPassword';
 import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import HrDashboard from './pages/HrDashboard';
@@ -16,14 +16,14 @@ import EmployeeRead from './pages/EmployeeRead';
 import EmployeeAdd from './pages/EmployeeAdd';
 import EmployeeEdit from './pages/EmployeeEdit';
 import EmployeeDelete from './pages/EmployeeDelete';
+import LeaveApplicationDetail from './pages/LeaveApplicationDetail';
 
 const App = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-
-        <Route path="/forgot-password" element={<ForgotPassword />} />  {/* ✅ Added */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         <Route
           path="/admin/dashboard"
@@ -39,6 +39,9 @@ const App = () => {
           path="/hr/dashboard"
           element={<ProtectedRoute allowedRole="hr" Component={HrDashboard} />}
         />
+
+        {/* Changed to hyphen-separated path as requested */}
+        <Route path="/leave-application-detail/:id" element={<LeaveApplicationDetail />} />
 
         <Route path="/admin/permission/:id" element={<PermissionComponent />} />
         <Route path="/employee/granted-permissions" element={<EmployeeGrantedPermission />} />
