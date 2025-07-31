@@ -15,6 +15,7 @@ const LeaveApply = () => {
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [noOfDays, setNoOfDays] = useState('');
   const [message, setMessage] = useState('');
+  const [maxLimitExceeded, setMaxLimitExceeded] = useState(false);
 
   useEffect(() => {
     const storedUser = JSON.parse(sessionStorage.getItem('user'));
@@ -26,7 +27,6 @@ const LeaveApply = () => {
       }));
     }
 
-    // Fetch leave types dynamically
     axios.get('http://localhost:2000/api/leave/type-names')
       .then(res => setLeaveTypes(res.data))
       .catch(err => console.error('Error fetching leave types:', err));
@@ -45,13 +45,27 @@ const LeaveApply = () => {
     const updatedData = { ...leaveData, [name]: value };
     setLeaveData(updatedData);
 
-    if (name === 'to_date' || name === 'from_date') {
-      const { from_date, to_date } = updatedData;
+    if (name === 'leave_type' || name === 'from_date' || name === 'to_date') {
+      const { leave_type, from_date, to_date } = {
+        ...updatedData,
+        [name]: value
+      };
+
       if (from_date && to_date && new Date(from_date) <= new Date(to_date)) {
         const days = calculateDays(from_date, to_date);
         setNoOfDays(days);
+
+        const selectedLeave = leaveTypes.find(
+          (lt) => lt.leave_type === leave_type
+        );
+        if (selectedLeave && days > selectedLeave.max_per_request) {
+          setMaxLimitExceeded(true);
+        } else {
+          setMaxLimitExceeded(false);
+        }
       } else {
         setNoOfDays('');
+        setMaxLimitExceeded(false);
       }
     }
   };
@@ -59,6 +73,12 @@ const LeaveApply = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+
+    if (maxLimitExceeded) {
+      const selectedLeave = leaveTypes.find(lt => lt.leave_type === leaveData.leave_type);
+      const max = selectedLeave?.max_per_request || 0;
+      setMessage(`❌ You are exceeding the max allowed per request (${max} day(s) allowed), but form will still be submitted.`);
+    }
 
     try {
       const payload = { ...leaveData, no_of_days: noOfDays };
@@ -74,6 +94,7 @@ const LeaveApply = () => {
           reason: ''
         });
         setNoOfDays('');
+        setMaxLimitExceeded(false);
       }
     } catch (error) {
       console.error('Leave submission error:', error);
@@ -110,8 +131,8 @@ const LeaveApply = () => {
               >
                 <option value="">-- Select --</option>
                 {leaveTypes.map((leave, index) => (
-                  <option key={index} value={leave}>
-                    {leave}
+                  <option key={index} value={leave.leave_type}>
+                    {leave.leave_type}
                   </option>
                 ))}
               </select>
@@ -145,8 +166,19 @@ const LeaveApply = () => {
 
           {noOfDays && (
             <div className="text-center mb-3">
-              <div className="alert alert-info py-2 px-3 small mb-0" role="alert">
+              <div
+                className={`alert py-2 px-3 small mb-0 ${maxLimitExceeded ? 'alert-danger' : 'alert-info'}`}
+                role="alert"
+              >
                 📆 <strong>{noOfDays}</strong> day(s) applied
+                {maxLimitExceeded && (
+                  <>
+                    {' '}– exceeds the maximum allowed for this leave type (
+                    {
+                      leaveTypes.find((lt) => lt.leave_type === leaveData.leave_type)?.max_per_request || 0
+                    } day(s) allowed).
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -163,7 +195,10 @@ const LeaveApply = () => {
             />
           </div>
 
-          <button type="submit" className="btn btn-outline-light fw-bold w-100 rounded-3 small">
+          <button
+            type="submit"
+            className="btn btn-outline-light fw-bold w-100 rounded-3 small"
+          >
             Submit Application
           </button>
 

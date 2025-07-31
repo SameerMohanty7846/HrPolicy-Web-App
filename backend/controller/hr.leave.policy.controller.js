@@ -56,19 +56,28 @@ export const addLeavePolicy = (req, res) => {
 // ✅ Get all leave policies
 // ✅ Get only leave type names
 export const getLeaveTypeNames = (req, res) => {
-  const query = `SELECT leave_type FROM hr_leave_policy ORDER BY leave_type ASC`;
+  const query = `
+    SELECT leave_type, max_per_request 
+    FROM hr_leave_policy 
+    ORDER BY leave_type ASC
+  `;
 
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching leave type names:', err);
+      console.error('Error fetching leave types:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
 
-    // Return array of leave type strings only, not array of objects
-    const leaveTypes = results.map(row => row.leave_type);
+    // Return array of objects with leave_type and max_per_request
+    const leaveTypes = results.map(row => ({
+      leave_type: row.leave_type,
+      max_per_request: row.max_per_request
+    }));
+
     res.status(200).json(leaveTypes);
   });
 };
+
 
 
 // ✅ Delete leave policy by ID
