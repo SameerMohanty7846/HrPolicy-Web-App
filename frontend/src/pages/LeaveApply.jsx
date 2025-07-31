@@ -32,18 +32,12 @@ const LeaveApply = () => {
       .catch(err => console.error('Error fetching leave types:', err));
   }, []);
 
-  const calculateDaysExcludingSundays = (fromDate, toDate) => {
+  const calculateDays = (fromDate, toDate) => {
     const from = new Date(fromDate);
     const to = new Date(toDate);
-    let count = 0;
-
-    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-      if (d.getDay() !== 0) { // 0 = Sunday
-        count++;
-      }
-    }
-
-    return count;
+    const diffTime = Math.abs(to - from);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
   };
 
   const handleChange = (e) => {
@@ -54,7 +48,7 @@ const LeaveApply = () => {
     if (name === 'to_date' || name === 'from_date') {
       const { from_date, to_date } = updatedData;
       if (from_date && to_date && new Date(from_date) <= new Date(to_date)) {
-        const days = calculateDaysExcludingSundays(from_date, to_date);
+        const days = calculateDays(from_date, to_date);
         setNoOfDays(days);
       } else {
         setNoOfDays('');
@@ -152,7 +146,7 @@ const LeaveApply = () => {
           {noOfDays && (
             <div className="text-center mb-3">
               <div className="alert alert-info py-2 px-3 small mb-0" role="alert">
-                📆 <strong>{noOfDays}</strong> day(s) applied (excluding Sundays)
+                📆 <strong>{noOfDays}</strong> day(s) applied
               </div>
             </div>
           )}
