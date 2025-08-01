@@ -19,7 +19,6 @@ const LeaveApply = () => {
   const [maxLimitExceeded, setMaxLimitExceeded] = useState(false);
   const [remainingBalance, setRemainingBalance] = useState(null);
 
-  // Load user + leave types
   useEffect(() => {
     const storedUser = JSON.parse(sessionStorage.getItem('user'));
     if (storedUser) {
@@ -29,7 +28,6 @@ const LeaveApply = () => {
         employee_name: storedUser.name,
       }));
 
-      // Fetch leave summary for that employee
       axios.get(`http://localhost:2000/api/employee/leave-summary/${storedUser.id}`)
         .then(res => setLeaveSummary(res.data.summary || []))
         .catch(err => console.error('Error fetching leave summary:', err));
@@ -52,7 +50,6 @@ const LeaveApply = () => {
     const updatedData = { ...leaveData, [name]: value };
     setLeaveData(updatedData);
 
-    // When leave_type, from_date, or to_date changes
     if (['leave_type', 'from_date', 'to_date'].includes(name)) {
       const { leave_type, from_date, to_date } = {
         ...updatedData,
@@ -62,7 +59,6 @@ const LeaveApply = () => {
       const selectedLeavePolicy = leaveTypes.find(lt => lt.leave_type === leave_type);
       const summaryEntry = leaveSummary.find(s => s.leave_type === leave_type);
 
-      // Show leave balance info
       if (summaryEntry) {
         const remaining = summaryEntry.total_leaves - summaryEntry.taken_days;
         setRemainingBalance({ total: summaryEntry.total_leaves, taken: summaryEntry.taken_days, remaining });
@@ -70,7 +66,6 @@ const LeaveApply = () => {
         setRemainingBalance(null);
       }
 
-      // Calculate no. of days and check max limit
       if (from_date && to_date && new Date(from_date) <= new Date(to_date)) {
         const days = calculateDays(from_date, to_date);
         setNoOfDays(days);
@@ -218,12 +213,15 @@ const LeaveApply = () => {
             />
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-outline-light fw-bold w-100 rounded-3 small"
-          >
-            Submit Application
-          </button>
+          {/* Hide submit button if max limit exceeded */}
+          {!maxLimitExceeded && (
+            <button
+              type="submit"
+              className="btn btn-outline-light fw-bold w-100 rounded-3 small"
+            >
+              Submit Application
+            </button>
+          )}
 
           {message && (
             <div className="text-center mt-3">
