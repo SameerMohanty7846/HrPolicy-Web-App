@@ -170,7 +170,6 @@ CREATE TABLE leave_applications (
   applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
-
 CREATE TABLE hr_leave_policy (
   id INT PRIMARY KEY AUTO_INCREMENT,
   leave_type VARCHAR(50) NOT NULL UNIQUE,     -- e.g., Earned, Casual, Sick, etc.
@@ -180,21 +179,24 @@ CREATE TABLE hr_leave_policy (
   max_per_request INT NOT NULL                -- Maximum leaves allowed per application
 );
 
-
-
-
 CREATE TABLE employee_leave_summary (
   id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id INT NOT NULL,
-
+  
+  -- Policy information from hr_leave_policy
+  policy_id INT NOT NULL,  -- Reference to hr_leave_policy.id
   leave_type VARCHAR(50) NOT NULL,
   mode ENUM('Paid', 'Free') NOT NULL,
-  total_leaves INT NOT NULL,       -- Copied from hr_leave_policy.total_leaves
-  taken_days INT DEFAULT 0,        -- Updated as leave is taken
-
+  frequency ENUM('Monthly', 'Yearly') NOT NULL,
+  total_leaves INT NOT NULL,
+  max_per_request INT NOT NULL,
+  
+  -- Employee-specific leave tracking
+  taken_days INT DEFAULT 0,        -- Tracks how many days have been taken
+  
   FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-
-  UNIQUE (employee_id, leave_type)
+  FOREIGN KEY (policy_id) REFERENCES hr_leave_policy(id) ON DELETE CASCADE,
+  UNIQUE (employee_id, policy_id)
 );
 -- for retrirving all the details of all employees about their leaves-- 
 SELECT 
@@ -251,16 +253,8 @@ WHERE
 
 
 
--- hr policy for leave-- 
--- Step 1: Create the table
 
--- Step 2: Insert leave policy data
-INSERT INTO hr_leave_policy (leave_type, allowed_days)
-VALUES
-('Earned Leave (EL)', 18),
-('Casual Leave (CL)', 8),
-('Sick Leave (SL)', 8),
-('Leave Without Pay (LWP)', 10);
+
 
 
 

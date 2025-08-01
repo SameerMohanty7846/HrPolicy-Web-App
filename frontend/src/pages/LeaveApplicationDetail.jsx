@@ -13,9 +13,9 @@ const LeaveApplicationDetail = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // First fetch leave application details
+        // ✅ Use dynamic applicationId instead of hardcoded value
         const leaveResponse = await axios.get(
-          `http://localhost:2000/api/leave/applications/8` // Using fixed endpoint as requested
+          `http://localhost:2000/api/leave/applications/${applicationId}`
         );
         setLeaveData(leaveResponse.data);
 
@@ -47,12 +47,10 @@ const LeaveApplicationDetail = () => {
   };
 
   const handleApprove = () => {
-    // TODO: Implement approve logic
     console.log('Approving application:', applicationId);
   };
 
   const handleReject = () => {
-    // TODO: Implement reject logic
     console.log('Rejecting application:', applicationId);
   };
 
@@ -103,7 +101,6 @@ const LeaveApplicationDetail = () => {
       </div>
 
       <div className="row">
-        {/* Left Column - Leave Application Details */}
         <div className="col-lg-8 mb-4 mb-lg-0">
           <div className="card h-100 shadow-sm">
             <div className="card-header bg-light">
@@ -174,7 +171,6 @@ const LeaveApplicationDetail = () => {
           </div>
         </div>
 
-        {/* Right Column - Employee Summary */}
         <div className="col-lg-4">
           <div className="card h-100 shadow-sm">
             <div className="card-header bg-light">
