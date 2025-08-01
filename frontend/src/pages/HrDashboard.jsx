@@ -13,17 +13,11 @@ import TaskManagement from './TaskManagement';
 import ChangePassword from './ChangePassword';
 import EmployeeGrantedPermission from './EmployeeGrantedPermission';
 import HrLeavePolicy from './HrLeavePolicy';
-import LeaveApplication from './LeaveApplication'; // ✅ Newly added
+import LeaveApplication from './LeaveApplication';
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 const HrDashboard = () => {
@@ -33,6 +27,7 @@ const HrDashboard = () => {
   const [dailyData, setDailyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -42,6 +37,7 @@ const HrDashboard = () => {
     if (storedUser) {
       setUser(storedUser);
       fetchRatingStats(storedUser.id);
+      fetchPendingLeaves();
     }
   }, []);
 
@@ -89,6 +85,15 @@ const HrDashboard = () => {
     } catch (error) {
       console.error('Failed to fetch rating stats:', error);
       setLoading(false);
+    }
+  };
+
+  const fetchPendingLeaves = async () => {
+    try {
+      const res = await axios.get("http://localhost:2000/api/leave/applications/pending");
+      setPendingLeaveCount(res.data?.total_pending_applications || 0);
+    } catch (err) {
+      console.error("Failed to fetch pending leaves:", err);
     }
   };
 
@@ -143,7 +148,7 @@ const HrDashboard = () => {
       case 'grantedPermissions':
         return <EmployeeGrantedPermission employeeId={user.id} />;
       case 'leaveApplications':
-        return <LeaveApplication />; // ✅ Newly added case
+        return <LeaveApplication />;
       default:
         return (
           <div className="px-3">
@@ -187,7 +192,16 @@ const HrDashboard = () => {
         <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
-        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveApplications')}>📄 Leave Applications</button> {/* ✅ NEW */}
+
+        <button className="sidebar-btn position-relative" onClick={() => setActiveComponent('leaveApplications')}>
+          📄 Leave Applications
+          {pendingLeaveCount > 0 && (
+            <span className="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-danger">
+              {pendingLeaveCount}
+            </span>
+          )}
+        </button>
+
         <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
         <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>🚪 Logout</button>
       </div>
@@ -214,6 +228,7 @@ const HrDashboard = () => {
           border-radius: 12px;
           font-weight: 600;
           text-align: left;
+          position: relative;
           transition: all 0.3s ease;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }

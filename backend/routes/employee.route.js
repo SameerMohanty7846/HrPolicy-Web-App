@@ -42,7 +42,9 @@ import {
 // 📝 LEAVE POLICY CONTROLLERS
 import {
   addLeavePolicy,
-getLeaveTypeNames,  deleteLeavePolicy,getAllLeavePolicies
+  getLeaveTypeNames,
+  deleteLeavePolicy,
+  getAllLeavePolicies
 } from "../controller/hr.leave.policy.controller.js";
 
 import {
@@ -51,8 +53,11 @@ import {
   submitLeaveApplication,
   updateLeaveStatus,
   getLeaveApplicationsByEmployeeId,
-  getLeaveApplicationById // Add this import
+  getLeaveApplicationById,
+  getPendingApplicationsCount,           // ✅ NEW
+  getAllPendingApplicationsCount         // ✅ NEW
 } from "../controller/leave.controller.js";
+
 const router = express.Router();
 
 // ========================= 🔐 AUTH ROUTES =========================
@@ -85,36 +90,34 @@ router.post("/tasks/resume", resumeTask);
 router.post("/tasks/finish", finishTask);
 
 // ================= 📊 ANALYTICS =================
-// → Base Ratings
 router.get("/ratings/daily/:employeeId", getDailyRatings);
 router.get("/ratings/monthly/:employeeId", getMonthlyRatings);
-
-// → Ratings with Employee Names
 router.get("/ratings/daily-employee/:employeeId", getDailyEmployeeRatings);
 router.get("/ratings/monthly-employee/:employeeId", getMonthlyEmployeeRatings);
-
-// → Admin Dashboard: Weekly & Yearly
 router.get("/analytics/weekly-employee-ratings", getWeeklyEmployeeRatings);
 router.get("/analytics/yearly-employee-ratings", getYearlyEmployeeRatings);
 
 // ================= 📝 LEAVES =================
-// Leave application submission
 router.post("/leave/apply", submitLeaveApplication);
-
-// Get all leave applications
 router.get("/leave/applications", getAllLeaveApplications);
-
-// Update leave status (approve/reject)
 router.patch("/leave/applications/:application_id/status", updateLeaveStatus);
 router.get("/employee/leave-summary/:employee_id", getLeaveSummaryByEmployee);
-router.get('/employee/leave-applications/:employee_id', getLeaveApplicationsByEmployeeId);
-router.get("/leave/applications/:applicationId", getLeaveApplicationById);
-// ================= 🛡️ HR LEAVE POLICY =================
-// 🛡️ HR LEAVE POLICY ROUTES
-router.post("/hr-leave-policy", addLeavePolicy);             // Add new policy
-router.get("/hr-leave-policy", getAllLeavePolicies);         // ✅ Fetch all policies
-router.get("/leave/type-names", getLeaveTypeNames);          // Get type names only (for dropdowns)
-router.delete("/hr-leave-policy/:id", deleteLeavePolicy);    // Delete by ID
+router.get("/employee/leave-applications/:employee_id", getLeaveApplicationsByEmployeeId);
+// Place this FIRST to avoid conflict
+router.get("/leave/applications/pending", getAllPendingApplicationsCount);
 
+// THEN the one with param
+router.get("/leave/applications/pending/:employeeId", getPendingApplicationsCount);
+
+// THEN this one LAST
+router.get("/leave/applications/:applicationId", getLeaveApplicationById);
+
+
+
+// ================= 🛡️ HR LEAVE POLICY =================
+router.post("/hr-leave-policy", addLeavePolicy);
+router.get("/hr-leave-policy", getAllLeavePolicies);
+router.get("/leave/type-names", getLeaveTypeNames);
+router.delete("/hr-leave-policy/:id", deleteLeavePolicy);
 
 export default router;

@@ -210,6 +210,52 @@ export const getLeaveApplicationById = (req, res) => {
   });
 };
 
+//notifications about the pending applications 
+
+
+
+
+// Route: GET /api/leave/applications/pending
+export const getAllPendingApplicationsCount = (req, res) => {
+  const query = `
+    SELECT COUNT(*) AS totalPending 
+    FROM leave_applications 
+    WHERE status = 'Pending'
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+
+    // If there are no pending applications, return 0
+    const count = results[0]?.totalPending || 0;
+    res.json({ total_pending_applications: count });
+  });
+};
+
+// Route: GET /api/leave/applications/pending/:employeeId
+export const getPendingApplicationsCount = (req, res) => {
+  const employeeId = req.params.employeeId;
+
+  const query = `
+    SELECT COUNT(*) AS pendingCount 
+    FROM leave_applications 
+    WHERE status = 'Pending' AND employee_id = ?
+  `;
+
+  db.query(query, [employeeId], (err, results) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+
+    const count = results[0]?.pendingCount || 0;
+    res.json({ pending_for_employee: count });
+  });
+};
+
 
 
 

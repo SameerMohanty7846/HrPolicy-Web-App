@@ -18,7 +18,7 @@ import TaskManagement from './TaskManagement';
 import ChangePassword from './ChangePassword';
 import EmployeeGrantedPermission from './EmployeeGrantedPermission';
 import LeaveApply from './LeaveApply';
-import EmployeeLeaveDashboard from './EmployeeLeaveDashboard'; // ✅ NEW IMPORT
+import EmployeeLeaveDashboard from './EmployeeLeaveDashboard';
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -27,22 +27,36 @@ const EmployeeDashboard = () => {
   const [dailyData, setDailyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   useEffect(() => {
     const storedUser = JSON.parse(sessionStorage.getItem('user'));
-    if (storedUser) {
-      setUser(storedUser);
-      fetchRatingStats(storedUser.id);
+    if (!storedUser) {
+      alert('Session expired. Please login again.');
+      navigate('/login');
+      return;
     }
-  }, []);
+
+    setUser(storedUser);
+    fetchRatingStats(storedUser.id);
+    fetchPendingLeaves(storedUser.id);
+  }, [navigate]);
+
+  const fetchPendingLeaves = async (employeeId) => {
+    try {
+      const res = await axios.get(`http://localhost:2000/api/leave/applications/pending/${employeeId}`);
+      setPendingCount(res.data?.pending_for_employee || 0);
+    } catch (error) {
+      console.error('Error fetching pending leave count:', error);
+    }
+  };
 
   const fetchRatingStats = async (employeeId) => {
     try {
       setLoading(true);
-
       const [dailyRes, monthlyRes] = await Promise.all([
         axios.get(`http://localhost:2000/api/ratings/daily/${employeeId}`),
         axios.get(`http://localhost:2000/api/ratings/monthly/${employeeId}`),
@@ -80,11 +94,9 @@ const EmployeeDashboard = () => {
         max_rating: index > currentMonthIndex ? null : 5
       }));
       setMonthlyData(formattedMonthly);
-
-      setLoading(false);
-
     } catch (error) {
       console.error('Failed to fetch rating stats:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -136,7 +148,7 @@ const EmployeeDashboard = () => {
       case 'leaveApply':
         return <LeaveApply />;
       case 'leaveDashboard':
-        return <EmployeeLeaveDashboard employeeId={user.id} />; // ✅ NEW CASE
+        return <EmployeeLeaveDashboard employeeId={user.id} />;
       default:
         return (
           <div className="px-3">
@@ -178,7 +190,14 @@ const EmployeeDashboard = () => {
         <button className="sidebar-btn" onClick={() => setActiveComponent('assignTask')}>📝 Assign Task</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('taskManagement')}>📋 Manage My Tasks</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('leaveApply')}>📝 Apply for Leave</button>
-        <button className="sidebar-btn" onClick={() => setActiveComponent('leaveDashboard')}>📊 Leave Dashboard</button> {/* ✅ NEW BUTTON */}
+
+        <button className="sidebar-btn d-flex justify-content-between align-items-center" onClick={() => setActiveComponent('leaveDashboard')}>
+          <span>📊 Leave Dashboard</span>
+          {pendingCount > 0 && (
+            <span className="badge bg-warning text-dark ms-2">{pendingCount}</span>
+          )}
+        </button>
+
         <button className="sidebar-btn" onClick={() => setActiveComponent('grantedPermissions')}>✅ Granted Permissions</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
         <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>🚪 Logout</button>
