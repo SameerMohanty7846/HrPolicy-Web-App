@@ -55,7 +55,8 @@ import {
   getLeaveApplicationsByEmployeeId,
   getLeaveApplicationById,
   getPendingApplicationsCount,           // ✅ NEW
-  getAllPendingApplicationsCount         // ✅ NEW
+  getAllPendingApplicationsCount,         // ✅ NEW
+  checkLeaveConflict
 } from "../controller/leave.controller.js";
 
 const router = express.Router();
@@ -112,6 +113,8 @@ router.get("/leave/applications/pending/:employeeId", getPendingApplicationsCoun
 // THEN this one LAST
 router.get("/leave/applications/:applicationId", getLeaveApplicationById);
 
+//conflict-check between dates
+router.post('/leave/conflict-check', checkLeaveConflict);
 
 
 // ================= 🛡️ HR LEAVE POLICY =================

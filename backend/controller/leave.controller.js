@@ -258,4 +258,41 @@ export const getPendingApplicationsCount = (req, res) => {
 
 
 
+//check leave confilct between the dates 
+export const checkLeaveConflict = async (req, res) => {
+  const { employee_id, from_date, to_date } = req.body;
+
+  if (!employee_id || !from_date || !to_date) {
+    return res.status(400).json({ error: 'Required fields missing' });
+  }
+
+  const query = `
+    SELECT * FROM leave_applications
+    WHERE employee_id = ?
+      AND status = 'Approved'
+      AND (
+        (from_date BETWEEN ? AND ?)
+        OR (to_date BETWEEN ? AND ?)
+        OR (? BETWEEN from_date AND to_date)
+        OR (? BETWEEN from_date AND to_date)
+      )
+  `;
+
+  try {
+    const [rows] = await db.execute(query, [
+      employee_id, from_date, to_date,
+      from_date, to_date,
+      from_date, to_date
+    ]);
+
+    if (rows.length > 0) {
+      return res.status(200).json({ conflict: true, details: rows });
+    }
+
+    res.status(200).json({ conflict: false });
+  } catch (err) {
+    console.error('Leave conflict check error:', err);
+    res.status(500).json({ error: 'Server error while checking conflicts' });
+  }
+};
 
