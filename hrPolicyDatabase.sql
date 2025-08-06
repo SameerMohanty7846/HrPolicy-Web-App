@@ -162,6 +162,7 @@ CREATE TABLE leave_applications (
   employee_id INT NOT NULL,
   employee_name VARCHAR(50) NOT NULL,
   leave_type VARCHAR(50), -- Earned, Casual, Sick
+  
   from_date DATE NOT NULL,
   to_date DATE NOT NULL,
   no_of_days INT NOT NULL, -- ✅ Will be passed from frontend
@@ -198,6 +199,24 @@ CREATE TABLE employee_leave_summary (
   FOREIGN KEY (policy_id) REFERENCES hr_leave_policy(id) ON DELETE CASCADE,
   UNIQUE (employee_id, policy_id)
 );
+
+-- Attendance Table
+CREATE TABLE attendance (
+  id INT NOT NULL AUTO_INCREMENT,
+  emp_id INT NOT NULL,
+  emp_name VARCHAR(250) DEFAULT NULL,
+  date DATE DEFAULT NULL,
+  check_in TIME DEFAULT NULL,
+  check_out TIME DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  work_day INT,
+  PRIMARY KEY (id),
+  FOREIGN KEY (emp_id) REFERENCES employees(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+DROP TABLE ATTENDANCE;
+
+
 -- for retrirving all the details of all employees about their leaves-- 
 SELECT 
   e.id AS employee_id,
@@ -278,7 +297,9 @@ SELECT * FROM user_otps;
 SELECT * FROM leave_applications;
 SELECT * FROM employee_leave_summary;
 SELECT * FROM hr_leave_policy;
+SELECT * FROM attendance;
 
+desc hr_leave_policy;
 
 
 
@@ -301,6 +322,299 @@ DROP TABLE IF EXISTS employee_increments;
 DROP TABLE IF EXISTS employees;
 DROP TABLE IF EXISTS employee_leave_summary;
 DROP TABLE IF EXISTS hr_leave_policy;
+
+
+
+
+
+
+
+
+
+
+
+
+-- Admin User (employee_id = 1) - Mostly present with a few absences
+INSERT INTO attendance (emp_id, emp_name, date, check_in, check_out, work_day) VALUES
+-- Week 1 (July 1-5)
+(1, 'Admin User', '2025-07-01', '08:55:00', '17:10:00', 1),
+(1, 'Admin User', '2025-07-02', '09:05:00', '17:25:00', 1),
+(1, 'Admin User', '2025-07-03', '09:15:00', '17:35:00', 1),
+(1, 'Admin User', '2025-07-04', '08:50:00', '17:00:00', 1),
+(1, 'Admin User', '2025-07-05', NULL, NULL, 0), -- Saturday absent
+
+-- Week 2 (July 7-12)
+(1, 'Admin User', '2025-07-07', '09:00:00', '17:15:00', 1),
+(1, 'Admin User', '2025-07-08', NULL, NULL, 0), -- Absent
+(1, 'Admin User', '2025-07-09', '08:45:00', '17:30:00', 1),
+(1, 'Admin User', '2025-07-10', '09:10:00', '17:20:00', 1),
+(1, 'Admin User', '2025-07-11', '09:20:00', '16:45:00', 1),
+(1, 'Admin User', '2025-07-12', NULL, NULL, 0), -- Saturday absent
+
+-- Week 3 (July 14-19)
+(1, 'Admin User', '2025-07-14', '08:55:00', '17:25:00', 1),
+(1, 'Admin User', '2025-07-15', '09:05:00', '17:15:00', 1),
+(1, 'Admin User', '2025-07-16', '09:00:00', '17:00:00', 1),
+(1, 'Admin User', '2025-07-17', NULL, NULL, 0), -- Absent
+(1, 'Admin User', '2025-07-18', '08:50:00', '17:40:00', 1),
+(1, 'Admin User', '2025-07-19', '09:30:00', '15:00:00', 1), -- Saturday half-day
+
+-- Week 4 (July 21-26)
+(1, 'Admin User', '2025-07-21', '09:00:00', '17:00:00', 1),
+(1, 'Admin User', '2025-07-22', '09:10:00', '17:20:00', 1),
+(1, 'Admin User', '2025-07-23', NULL, NULL, 0), -- Absent
+(1, 'Admin User', '2025-07-24', '08:45:00', '17:30:00', 1),
+(1, 'Admin User', '2025-07-25', '09:15:00', '17:45:00', 1),
+(1, 'Admin User', '2025-07-26', NULL, NULL, 0), -- Saturday absent
+
+-- Week 5 (July 28-31)
+(1, 'Admin User', '2025-07-28', '09:00:00', '17:00:00', 1),
+(1, 'Admin User', '2025-07-29', '08:55:00', '17:25:00', 1),
+(1, 'Admin User', '2025-07-30', '09:05:00', '17:15:00', 1),
+(1, 'Admin User', '2025-07-31', NULL, NULL, 0); -- Absent
+
+-- Reyansh Patel (employee_id = 2) - HR, mostly present
+INSERT INTO attendance (emp_id, emp_name, date, check_in, check_out, work_day) VALUES
+-- Week 1 (July 1-5)
+(2, 'Reyansh Patel', '2025-07-01', '09:00:00', '17:30:00', 1),
+(2, 'Reyansh Patel', '2025-07-02', '09:05:00', '17:25:00', 1),
+(2, 'Reyansh Patel', '2025-07-03', '09:10:00', '17:20:00', 1),
+(2, 'Reyansh Patel', '2025-07-04', '08:55:00', '17:35:00', 1),
+(2, 'Reyansh Patel', '2025-07-05', '09:30:00', '16:00:00', 1), -- Saturday half-day
+
+-- Week 2 (July 7-12)
+(2, 'Reyansh Patel', '2025-07-07', '09:00:00', '17:00:00', 1),
+(2, 'Reyansh Patel', '2025-07-08', '09:15:00', '17:45:00', 1),
+(2, 'Reyansh Patel', '2025-07-09', '08:50:00', '17:10:00', 1),
+(2, 'Reyansh Patel', '2025-07-10', NULL, NULL, 0), -- Absent
+(2, 'Reyansh Patel', '2025-07-11', '09:05:00', '17:25:00', 1),
+(2, 'Reyansh Patel', '2025-07-12', NULL, NULL, 0), -- Saturday absent
+
+-- Week 3 (July 14-19)
+(2, 'Reyansh Patel', '2025-07-14', '09:00:00', '17:00:00', 1),
+(2, 'Reyansh Patel', '2025-07-15', '09:10:00', '17:20:00', 1),
+(2, 'Reyansh Patel', '2025-07-16', '08:45:00', '17:30:00', 1),
+(2, 'Reyansh Patel', '2025-07-17', '09:05:00', '17:15:00', 1),
+(2, 'Reyansh Patel', '2025-07-18', NULL, NULL, 0), -- Absent
+(2, 'Reyansh Patel', '2025-07-19', NULL, NULL, 0), -- Saturday absent
+
+-- Week 4 (July 21-26)
+(2, 'Reyansh Patel', '2025-07-21', '09:00:00', '17:00:00', 1),
+(2, 'Reyansh Patel', '2025-07-22', '09:15:00', '17:45:00', 1),
+(2, 'Reyansh Patel', '2025-07-23', '08:55:00', '17:25:00', 1),
+(2, 'Reyansh Patel', '2025-07-24', '09:05:00', '17:15:00', 1),
+(2, 'Reyansh Patel', '2025-07-25', '09:10:00', '17:20:00', 1),
+(2, 'Reyansh Patel', '2025-07-26', '10:00:00', '15:00:00', 1), -- Saturday half-day
+
+-- Week 5 (July 28-31)
+(2, 'Reyansh Patel', '2025-07-28', '09:00:00', '17:00:00', 1),
+(2, 'Reyansh Patel', '2025-07-29', NULL, NULL, 0), -- Absent
+(2, 'Reyansh Patel', '2025-07-30', '09:05:00', '17:25:00', 1),
+(2, 'Reyansh Patel', '2025-07-31', '08:50:00', '17:10:00', 1);
+
+-- Aarav Sharma (employee_id = 3) - Employee, regular attendance
+INSERT INTO attendance (emp_id, emp_name, date, check_in, check_out, work_day) VALUES
+-- Week 1 (July 1-5)
+(3, 'Aarav Sharma', '2025-07-01', '08:45:00', '17:30:00', 1),
+(3, 'Aarav Sharma', '2025-07-02', '08:50:00', '17:25:00', 1),
+(3, 'Aarav Sharma', '2025-07-03', '08:55:00', '17:20:00', 1),
+(3, 'Aarav Sharma', '2025-07-04', '09:00:00', '17:15:00', 1),
+(3, 'Aarav Sharma', '2025-07-05', NULL, NULL, 0), -- Saturday absent
+
+-- Week 2 (July 7-12)
+(3, 'Aarav Sharma', '2025-07-07', '08:45:00', '17:30:00', 1),
+(3, 'Aarav Sharma', '2025-07-08', '08:50:00', '17:25:00', 1),
+(3, 'Aarav Sharma', '2025-07-09', '08:55:00', '17:20:00', 1),
+(3, 'Aarav Sharma', '2025-07-10', '09:00:00', '17:15:00', 1),
+(3, 'Aarav Sharma', '2025-07-11', NULL, NULL, 0), -- Absent
+(3, 'Aarav Sharma', '2025-07-12', '09:30:00', '16:00:00', 1), -- Saturday half-day
+
+-- Week 3 (July 14-19)
+(3, 'Aarav Sharma', '2025-07-14', '08:45:00', '17:30:00', 1),
+(3, 'Aarav Sharma', '2025-07-15', '08:50:00', '17:25:00', 1),
+(3, 'Aarav Sharma', '2025-07-16', NULL, NULL, 0), -- Absent
+(3, 'Aarav Sharma', '2025-07-17', '08:55:00', '17:20:00', 1),
+(3, 'Aarav Sharma', '2025-07-18', '09:00:00', '17:15:00', 1),
+(3, 'Aarav Sharma', '2025-07-19', NULL, NULL, 0), -- Saturday absent
+
+-- Week 4 (July 21-26)
+(3, 'Aarav Sharma', '2025-07-21', '08:45:00', '17:30:00', 1),
+(3, 'Aarav Sharma', '2025-07-22', '08:50:00', '17:25:00', 1),
+(3, 'Aarav Sharma', '2025-07-23', '08:55:00', '17:20:00', 1),
+(3, 'Aarav Sharma', '2025-07-24', '09:00:00', '17:15:00', 1),
+(3, 'Aarav Sharma', '2025-07-25', NULL, NULL, 0), -- Absent
+(3, 'Aarav Sharma', '2025-07-26', NULL, NULL, 0), -- Saturday absent
+
+-- Week 5 (July 28-31)
+(3, 'Aarav Sharma', '2025-07-28', '08:45:00', '17:30:00', 1),
+(3, 'Aarav Sharma', '2025-07-29', '08:50:00', '17:25:00', 1),
+(3, 'Aarav Sharma', '2025-07-30', '08:55:00', '17:20:00', 1),
+(3, 'Aarav Sharma', '2025-07-31', '09:00:00', '17:15:00', 1);
+
+-- Vivaan Mehta (employee_id = 4) - Employee, some leaves
+INSERT INTO attendance (emp_id, emp_name, date, check_in, check_out, work_day) VALUES
+-- Week 1 (July 1-5)
+(4, 'Vivaan Mehta', '2025-07-01', '09:15:00', '17:45:00', 1),
+(4, 'Vivaan Mehta', '2025-07-02', '09:20:00', '17:40:00', 1),
+(4, 'Vivaan Mehta', '2025-07-03', NULL, NULL, 0), -- Absent
+(4, 'Vivaan Mehta', '2025-07-04', '09:10:00', '17:50:00', 1),
+(4, 'Vivaan Mehta', '2025-07-05', NULL, NULL, 0), -- Saturday absent
+
+-- Week 2 (July 7-12)
+(4, 'Vivaan Mehta', '2025-07-07', '09:15:00', '17:45:00', 1),
+(4, 'Vivaan Mehta', '2025-07-08', '09:20:00', '17:40:00', 1),
+(4, 'Vivaan Mehta', '2025-07-09', '09:10:00', '17:50:00', 1),
+(4, 'Vivaan Mehta', '2025-07-10', '09:05:00', '17:55:00', 1),
+(4, 'Vivaan Mehta', '2025-07-11', NULL, NULL, 0), -- Absent
+(4, 'Vivaan Mehta', '2025-07-12', '10:00:00', '15:30:00', 1), -- Saturday half-day
+
+-- Week 3 (July 14-19)
+(4, 'Vivaan Mehta', '2025-07-14', '09:15:00', '17:45:00', 1),
+(4, 'Vivaan Mehta', '2025-07-15', NULL, NULL, 0), -- Absent
+(4, 'Vivaan Mehta', '2025-07-16', '09:20:00', '17:40:00', 1),
+(4, 'Vivaan Mehta', '2025-07-17', '09:10:00', '17:50:00', 1),
+(4, 'Vivaan Mehta', '2025-07-18', '09:05:00', '17:55:00', 1),
+(4, 'Vivaan Mehta', '2025-07-19', NULL, NULL, 0), -- Saturday absent
+
+-- Week 4 (July 21-26)
+(4, 'Vivaan Mehta', '2025-07-21', '09:15:00', '17:45:00', 1),
+(4, 'Vivaan Mehta', '2025-07-22', '09:20:00', '17:40:00', 1),
+(4, 'Vivaan Mehta', '2025-07-23', '09:10:00', '17:50:00', 1),
+(4, 'Vivaan Mehta', '2025-07-24', NULL, NULL, 0), -- Absent
+(4, 'Vivaan Mehta', '2025-07-25', '09:05:00', '17:55:00', 1),
+(4, 'Vivaan Mehta', '2025-07-26', NULL, NULL, 0), -- Saturday absent
+
+-- Week 5 (July 28-31)
+(4, 'Vivaan Mehta', '2025-07-28', '09:15:00', '17:45:00', 1),
+(4, 'Vivaan Mehta', '2025-07-29', '09:20:00', '17:40:00', 1),
+(4, 'Vivaan Mehta', '2025-07-30', '09:10:00', '17:50:00', 1),
+(4, 'Vivaan Mehta', '2025-07-31', NULL, NULL, 0); -- Absent
+
+-- -----------------------------
+-- =============LEAVE APPLICATIONS======
+-- Leave applications for Admin User (employee_id = 1)
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
+-- Matches the absence on July 5 (Saturday)
+(1, 'Admin User', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Weekend family event', 'Approved'),
+
+-- Matches the absence on July 8
+(1, 'Admin User', 'SL(Sick Leave)', '2025-07-08', '2025-07-08', 1, 'Not feeling well', 'Approved'),
+
+-- Pending leave (not matching any absence)
+(1, 'Admin User', 'EL(Earned Leave)', '2025-07-09', '2025-07-09', 1, 'Need a day off', 'Pending'),
+
+-- Matches the absence on July 12 (Saturday)
+(1, 'Admin User', 'CL(Casual Leave)', '2025-07-12', '2025-07-12', 1, 'Personal work', 'Approved'),
+
+-- Rejected leave (not matching any absence)
+(1, 'Admin User', 'CL(Casual Leave)', '2025-07-14', '2025-07-14', 1, 'Family visit', 'Rejected'),
+
+-- Matches the absence on July 17
+(1, 'Admin User', 'EL(Earned Leave)', '2025-07-17', '2025-07-17', 1, 'Taking a break', 'Approved'),
+
+-- Matches the absence on July 23
+(1, 'Admin User', 'SL(Sick Leave)', '2025-07-23', '2025-07-23', 1, 'Doctor appointment', 'Approved'),
+
+-- Matches the absence on July 26 (Saturday)
+(1, 'Admin User', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Family function', 'Approved'),
+
+-- Matches the absence on July 31
+(1, 'Admin User', 'EL(Earned Leave)', '2025-07-31', '2025-07-31', 1, 'Personal day', 'Approved');
+
+-- Leave applications for Reyansh Patel (employee_id = 2)
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
+-- Pending leave (not matching any absence)
+(2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-07', '2025-07-07', 1, 'Personal work', 'Pending'),
+
+-- Matches the absence on July 10
+(2, 'Reyansh Patel', 'SL(Sick Leave)', '2025-07-10', '2025-07-10', 1, 'Fever', 'Approved'),
+
+-- Rejected leave (not matching any absence)
+(2, 'Reyansh Patel', 'EL(Earned Leave)', '2025-07-11', '2025-07-11', 1, 'Day off', 'Rejected'),
+
+-- Matches the absence on July 18
+(2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-18', '2025-07-18', 1, 'Relative visiting', 'Approved'),
+
+-- Matches the absence on July 19 (Saturday)
+(2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Out of town', 'Approved'),
+
+-- Pending leave (not matching any absence)
+(2, 'Reyansh Patel', 'SL(Sick Leave)', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
+
+-- Matches the absence on July 29
+(2, 'Reyansh Patel', 'EL(Earned Leave)', '2025-07-29', '2025-07-29', 1, 'Personal errands', 'Approved');
+
+-- Leave applications for Aarav Sharma (employee_id = 3)
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
+-- Matches the absence on July 5 (Saturday)
+(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Weekend trip', 'Approved'),
+
+-- Rejected leave (not matching any absence)
+(3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-08', '2025-07-08', 1, 'Need a break', 'Rejected'),
+
+-- Matches the absence on July 11
+(3, 'Aarav Sharma', 'SL(Sick Leave)', '2025-07-11', '2025-07-11', 1, 'Not feeling well', 'Approved'),
+
+-- Pending leave (not matching any absence)
+(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-14', '2025-07-14', 1, 'Personal work', 'Pending'),
+
+-- Matches the absence on July 16
+(3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-16', '2025-07-16', 1, 'Mental health day', 'Approved'),
+
+-- Matches the absence on July 19 (Saturday)
+(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Family event', 'Approved'),
+
+-- Matches the absence on July 25
+(3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-25', '2025-07-25', 1, 'Personal work', 'Approved'),
+
+-- Matches the absence on July 26 (Saturday)
+(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Weekend getaway', 'Approved');
+
+-- Leave applications for Vivaan Mehta (employee_id = 4)
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
+-- Matches the absence on July 3
+(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-03', '2025-07-03', 1, 'Fever and cold', 'Approved'),
+
+-- Pending leave (not matching any absence)
+(4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-04', '2025-07-04', 1, 'Need a day off', 'Pending'),
+
+-- Matches the absence on July 5 (Saturday)
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Personal commitment', 'Approved'),
+
+-- Rejected leave (not matching any absence)
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-08', '2025-07-08', 1, 'Family visit', 'Rejected'),
+
+-- Matches the absence on July 11
+(4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-11', '2025-07-11', 1, 'Day off', 'Approved'),
+
+-- Matches the absence on July 15
+(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-15', '2025-07-15', 1, 'Medical checkup', 'Approved'),
+
+-- Matches the absence on July 19 (Saturday)
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Family function', 'Approved'),
+
+-- Pending leave (not matching any absence)
+(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
+
+-- Matches the absence on July 24
+(4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-24', '2025-07-24', 1, 'Personal day', 'Approved'),
+
+-- Matches the absence on July 26 (Saturday)
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Out of station', 'Approved'),
+
+-- Matches the absence on July 31
+(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-31', '2025-07-31', 1, 'Not feeling well', 'Approved');
+
+
+
+select * from attendance;
+select * from leave_applications;
+
+
+
+
+
+
 
 
 

@@ -59,7 +59,7 @@ import {
   checkLeaveConflict,
   getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
-import { getAttendanceReport } from "../controller/employee.attendance.controller.js";
+import { getAttendanceReport, getMonthlySalaryReport } from "../controller/employee.attendance.controller.js";
 
 const router = express.Router();
 
@@ -137,5 +137,8 @@ router.get('/attendance/:emp_id', getAttendanceReport);
 
 
 //=========================MONTHLY SALARY REPORT
+// GET /api/salary-report/08-2025
+router.get('/monthly-salary-report/:monthYear',getMonthlySalaryReport);
+
 
 export default router;
