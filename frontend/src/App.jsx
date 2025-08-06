@@ -17,6 +17,7 @@ import EmployeeAdd from './pages/EmployeeAdd';
 import EmployeeEdit from './pages/EmployeeEdit';
 import EmployeeDelete from './pages/EmployeeDelete';
 import LeaveApplicationDetail from './pages/LeaveApplicationDetail';
+import ViewEmployeeAttendanceReport from './pages/ViewEmployeeAttendanceReport';
 
 const App = () => {
   return (
@@ -48,6 +49,7 @@ const App = () => {
         <Route path="/employee/add" element={<EmployeeAdd />} />
         <Route path="/employee/edit" element={<EmployeeEdit />} />
         <Route path="/employee/delete" element={<EmployeeDelete />} />
+         <Route path="/attendance/:id" element={<ViewEmployeeAttendanceReport />} />
       </Routes>
     </BrowserRouter>
   );
