@@ -56,7 +56,8 @@ import {
   getLeaveApplicationById,
   getPendingApplicationsCount,           // ✅ NEW
   getAllPendingApplicationsCount,         // ✅ NEW
-  checkLeaveConflict
+  checkLeaveConflict,
+  getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
 
 const router = express.Router();
@@ -115,6 +116,11 @@ router.get("/leave/applications/:applicationId", getLeaveApplicationById);
 
 //conflict-check between dates
 router.post('/leave/conflict-check', checkLeaveConflict);
+
+//get current month leave information with salary
+// Route: GET /api/leaves/monthly-summary
+router.get('/leaves/monthly-summary', getMonthlyLeaveSummaryByMode);
+
 
 
 // ================= 🛡️ HR LEAVE POLICY =================

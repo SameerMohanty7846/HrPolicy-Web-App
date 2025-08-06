@@ -296,3 +296,47 @@ export const checkLeaveConflict = async (req, res) => {
   }
 };
 
+//For each employee get all the free leaves and paid leaves taken number of free leaves of paid leaves for the current month
+//So It should display all the employee names side by side number of free leave taken,number of paid leave taken,for the current month
+//retrieve the information of the leave by it type whether it's free or paid 
+
+// controllers/leaveSummaryController.js
+
+
+export const getMonthlyLeaveSummaryByMode = (req, res) => {
+  const sql = `
+    SELECT * FROM (
+      SELECT 
+        e.id AS employeeId,
+        e.name AS employeeName,
+        e.salary,
+        COALESCE(SUM(CASE WHEN els.mode = 'Free' THEN els.taken_days ELSE 0 END), 0) AS free_leaves,
+        COALESCE(SUM(CASE WHEN els.mode = 'Paid' THEN els.taken_days ELSE 0 END), 0) AS paid_leaves
+      FROM employees e
+      LEFT JOIN employee_leave_summary els 
+        ON e.id = els.employee_id
+      GROUP BY e.id, e.name, e.salary
+      ORDER BY e.id
+    ) AS summary
+    LIMIT 18446744073709551615 OFFSET 1;  -- OFFSET 1 skips the first row
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching leave summary:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch leave summary'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Current month leave summary fetched successfully (excluding first record)',
+      data: results
+    });
+  });
+};
+
+
+//

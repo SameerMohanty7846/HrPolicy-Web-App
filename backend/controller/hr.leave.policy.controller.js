@@ -111,3 +111,7 @@ export const getAllLeavePolicies = (req, res) => {
     res.status(200).json(results);
   });
 };
+
+
+
+
