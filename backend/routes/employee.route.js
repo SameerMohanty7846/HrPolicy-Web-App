@@ -59,6 +59,7 @@ import {
   checkLeaveConflict,
   getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
+import { getAttendanceReport } from "../controller/employee.attendance.controller.js";
 
 const router = express.Router();
 
@@ -128,5 +129,13 @@ router.post("/hr-leave-policy", addLeavePolicy);
 router.get("/hr-leave-policy", getAllLeavePolicies);
 router.get("/leave/type-names", getLeaveTypeNames);
 router.delete("/hr-leave-policy/:id", deleteLeavePolicy);
+
+
+//==========================MONTHLY ATTENDANCE REPORT ===========================
+router.get('/attendance/:emp_id', getAttendanceReport);
+//GET http://localhost:3000/api/attendance/5?monthYear=08-2025
+
+
+//=========================MONTHLY SALARY REPORT
 
 export default router;
