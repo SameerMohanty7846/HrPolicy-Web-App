@@ -215,6 +215,18 @@ CREATE TABLE attendance (
   FOREIGN KEY (emp_id) REFERENCES employees(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 DROP TABLE ATTENDANCE;
+CREATE TABLE monthly_salary_reports (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  employee_id INT NOT NULL,
+  month_year VARCHAR(7),
+  fixed_salary DECIMAL(10,2),
+  total_free_leaves INT,
+  paid_leaves INT,
+  daily_salary DECIMAL(10,2),
+  salary_deduction DECIMAL(10,2),
+  net_salary DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 
 -- for retrirving all the details of all employees about their leaves-- 
@@ -298,6 +310,10 @@ SELECT * FROM leave_applications;
 SELECT * FROM employee_leave_summary;
 SELECT * FROM hr_leave_policy;
 SELECT * FROM attendance;
+SELECT * FROM 
+monthly_salary_reports;
+
+
 
 desc hr_leave_policy;
 
@@ -322,6 +338,7 @@ DROP TABLE IF EXISTS employee_increments;
 DROP TABLE IF EXISTS employees;
 DROP TABLE IF EXISTS employee_leave_summary;
 DROP TABLE IF EXISTS hr_leave_policy;
+DROP TABLE IF EXISTS leave_applications;
 
 
 
@@ -492,118 +509,45 @@ INSERT INTO attendance (emp_id, emp_name, date, check_in, check_out, work_day) V
 
 -- -----------------------------
 -- =============LEAVE APPLICATIONS======
--- Leave applications for Admin User (employee_id = 1)
-INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
--- Matches the absence on July 5 (Saturday)
-(1, 'Admin User', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Weekend family event', 'Approved'),
-
--- Matches the absence on July 8
-(1, 'Admin User', 'SL(Sick Leave)', '2025-07-08', '2025-07-08', 1, 'Not feeling well', 'Approved'),
-
--- Pending leave (not matching any absence)
-(1, 'Admin User', 'EL(Earned Leave)', '2025-07-09', '2025-07-09', 1, 'Need a day off', 'Pending'),
-
--- Matches the absence on July 12 (Saturday)
-(1, 'Admin User', 'CL(Casual Leave)', '2025-07-12', '2025-07-12', 1, 'Personal work', 'Approved'),
-
--- Rejected leave (not matching any absence)
-(1, 'Admin User', 'CL(Casual Leave)', '2025-07-14', '2025-07-14', 1, 'Family visit', 'Rejected'),
-
--- Matches the absence on July 17
-(1, 'Admin User', 'EL(Earned Leave)', '2025-07-17', '2025-07-17', 1, 'Taking a break', 'Approved'),
-
--- Matches the absence on July 23
-(1, 'Admin User', 'SL(Sick Leave)', '2025-07-23', '2025-07-23', 1, 'Doctor appointment', 'Approved'),
-
--- Matches the absence on July 26 (Saturday)
-(1, 'Admin User', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Family function', 'Approved'),
-
--- Matches the absence on July 31
-(1, 'Admin User', 'EL(Earned Leave)', '2025-07-31', '2025-07-31', 1, 'Personal day', 'Approved');
-
 -- Leave applications for Reyansh Patel (employee_id = 2)
 INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
--- Pending leave (not matching any absence)
 (2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-07', '2025-07-07', 1, 'Personal work', 'Pending'),
-
--- Matches the absence on July 10
 (2, 'Reyansh Patel', 'SL(Sick Leave)', '2025-07-10', '2025-07-10', 1, 'Fever', 'Approved'),
-
--- Rejected leave (not matching any absence)
 (2, 'Reyansh Patel', 'EL(Earned Leave)', '2025-07-11', '2025-07-11', 1, 'Day off', 'Rejected'),
-
--- Matches the absence on July 18
-(2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-18', '2025-07-18', 1, 'Relative visiting', 'Approved'),
-
--- Matches the absence on July 19 (Saturday)
+(2, 'Reyansh Patel', 'LWP(Leave Without Pay)', '2025-07-18', '2025-07-18', 1, 'Relative visiting', 'Approved'),
 (2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Out of town', 'Approved'),
-
--- Pending leave (not matching any absence)
 (2, 'Reyansh Patel', 'SL(Sick Leave)', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
-
--- Matches the absence on July 29
 (2, 'Reyansh Patel', 'EL(Earned Leave)', '2025-07-29', '2025-07-29', 1, 'Personal errands', 'Approved');
 
 -- Leave applications for Aarav Sharma (employee_id = 3)
 INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
--- Matches the absence on July 5 (Saturday)
 (3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Weekend trip', 'Approved'),
-
--- Rejected leave (not matching any absence)
 (3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-08', '2025-07-08', 1, 'Need a break', 'Rejected'),
-
--- Matches the absence on July 11
-(3, 'Aarav Sharma', 'SL(Sick Leave)', '2025-07-11', '2025-07-11', 1, 'Not feeling well', 'Approved'),
-
--- Pending leave (not matching any absence)
+(3, 'Aarav Sharma', 'LWP(Leave Without Pay)', '2025-07-11', '2025-07-11', 1, 'Not feeling well', 'Approved'),
 (3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-14', '2025-07-14', 1, 'Personal work', 'Pending'),
-
--- Matches the absence on July 16
 (3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-16', '2025-07-16', 1, 'Mental health day', 'Approved'),
-
--- Matches the absence on July 19 (Saturday)
 (3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Family event', 'Approved'),
-
--- Matches the absence on July 25
-(3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-25', '2025-07-25', 1, 'Personal work', 'Approved'),
-
--- Matches the absence on July 26 (Saturday)
+(3, 'Aarav Sharma', 'LWP(Leave Without Pay)', '2025-07-25', '2025-07-25', 1, 'Personal work', 'Approved'),
 (3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Weekend getaway', 'Approved');
 
 -- Leave applications for Vivaan Mehta (employee_id = 4)
 INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
--- Matches the absence on July 3
-(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-03', '2025-07-03', 1, 'Fever and cold', 'Approved'),
-
--- Pending leave (not matching any absence)
+(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', '2025-07-03', '2025-07-03', 1, 'Fever and cold', 'Approved'),
 (4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-04', '2025-07-04', 1, 'Need a day off', 'Pending'),
-
--- Matches the absence on July 5 (Saturday)
 (4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Personal commitment', 'Approved'),
-
--- Rejected leave (not matching any absence)
 (4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-08', '2025-07-08', 1, 'Family visit', 'Rejected'),
-
--- Matches the absence on July 11
 (4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-11', '2025-07-11', 1, 'Day off', 'Approved'),
-
--- Matches the absence on July 15
 (4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-15', '2025-07-15', 1, 'Medical checkup', 'Approved'),
-
--- Matches the absence on July 19 (Saturday)
-(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Family function', 'Approved'),
-
--- Pending leave (not matching any absence)
+(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', '2025-07-19', '2025-07-19', 1, 'Family function', 'Approved'),
 (4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
-
--- Matches the absence on July 24
 (4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-24', '2025-07-24', 1, 'Personal day', 'Approved'),
-
--- Matches the absence on July 26 (Saturday)
 (4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Out of station', 'Approved'),
+(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', '2025-07-31', '2025-07-31', 1, 'Not feeling well', 'Approved');
 
--- Matches the absence on July 31
-(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-31', '2025-07-31', 1, 'Not feeling well', 'Approved');
+
+
+
+
 
 
 
