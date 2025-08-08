@@ -11,7 +11,8 @@ import ChangePassword from './ChangePassword';
 import HrLeavePolicy from './HrLeavePolicy';
 import EmployeeCurrentMonthSalary from './EmployeeCurrentMonthSalary';
 import EmployeeAttendanceReport from './EmployeeAttendanceReport';
-import EmployeeMonthlySalaryReport from './EmployeeMonthlySalaryReport'; // ✅ New import
+import EmployeeMonthlySalaryReport from './EmployeeMonthlySalaryReport';
+import SalaryPolicyForm from './SalaryPolicyForm'; // ✅ Newly added
 
 import {
   BarChart,
@@ -121,8 +122,10 @@ const AdminDashboard = () => {
         return <HrLeavePolicy />;
       case 'attendanceReport':
         return <EmployeeAttendanceReport />;
-      case 'monthlySalaryReport': // ✅ Added this
+      case 'monthlySalaryReport':
         return <EmployeeMonthlySalaryReport />;
+      case 'salaryPolicy': // ✅ New
+        return <SalaryPolicyForm />;
       default:
         return (
           <div className="px-3">
@@ -200,7 +203,8 @@ const AdminDashboard = () => {
         <button className="sidebar-btn" onClick={() => setActiveComponent('changePassword')}>🔐 Change Password</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('leavePolicy')}>📋 HR Leave Policy</button>
         <button className="sidebar-btn" onClick={() => setActiveComponent('attendanceReport')}>📝 Attendance Report</button>
-        <button className="sidebar-btn" onClick={() => setActiveComponent('monthlySalaryReport')}>💰 Monthly Salary Report</button> {/* ✅ New Button */}
+        <button className="sidebar-btn" onClick={() => setActiveComponent('monthlySalaryReport')}>💰 Monthly Salary Report</button>
+        <button className="sidebar-btn" onClick={() => setActiveComponent('salaryPolicy')}>📑 Salary Policy</button> {/* ✅ New Button */}
 
         <button className="btn btn-danger mt-4 fw-bold rounded-3 shadow logout-btn" onClick={handleLogout}>
           🚪 Logout

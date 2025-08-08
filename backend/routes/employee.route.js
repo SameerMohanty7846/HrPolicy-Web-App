@@ -144,22 +144,10 @@ router.post('/submit-salary-report', insertSalaryReport);
 
 
 //Salary Component Master
-// Create a new salary component
 router.post('/salary-components/create', createSalaryComponent);
-
-// Get all salary components
 router.get('/salary-components/list', getAllSalaryComponents);
-
-// Get salary component by ID
 router.get('/salary-components/view/id/:id', getComponentById);
-
-// Get salary component by Name
 router.get('/salary-components/view/name/:name', getComponentByName);
-
-// Get salary components by Type (earning/deduction)
 router.get('/salary-components/filter/type/:type', getComponentsByType);
-
-// Get salary components by Value Type (flat/percentage)
 router.get('/salary-components/filter/value-type/:value_type', getComponentsByValueType);
-
 export default router;
