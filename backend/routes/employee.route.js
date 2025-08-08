@@ -60,6 +60,7 @@ import {
   getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
 import { getAttendanceReport, getMonthlySalaryReport, insertSalaryReport } from "../controller/employee.attendance.controller.js";
+import { createSalaryComponent, getAllSalaryComponents, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType } from "../controller/salary.component.controller.js";
 
 const router = express.Router();
 
@@ -140,5 +141,25 @@ router.get('/attendance/:emp_id', getAttendanceReport);
 // GET /api/salary-report/08-2025
 router.get('/monthly-salary-report/:monthYear',getMonthlySalaryReport);
 router.post('/submit-salary-report', insertSalaryReport);
+
+
+//Salary Component Master
+// Create a new salary component
+router.post('/salary-components/create', createSalaryComponent);
+
+// Get all salary components
+router.get('/salary-components/list', getAllSalaryComponents);
+
+// Get salary component by ID
+router.get('/salary-components/view/id/:id', getComponentById);
+
+// Get salary component by Name
+router.get('/salary-components/view/name/:name', getComponentByName);
+
+// Get salary components by Type (earning/deduction)
+router.get('/salary-components/filter/type/:type', getComponentsByType);
+
+// Get salary components by Value Type (flat/percentage)
+router.get('/salary-components/filter/value-type/:value_type', getComponentsByValueType);
 
 export default router;
