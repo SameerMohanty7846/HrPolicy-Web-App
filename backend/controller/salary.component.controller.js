@@ -35,6 +35,21 @@ export const getAllSalaryComponents = (req, res) => {
   });
 };
 
+
+
+// 2. Get All Components excluding first
+export const getAllSalaryComponentsExcludingFirst = (req, res) => {
+  db.query(`SELECT * FROM salary_component_policy_master
+ORDER BY id
+LIMIT 18446744073709551615 OFFSET 1`, (error, rows) => {
+    if (error) {
+      console.error('Error fetching components:', error);
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(200).json(rows);
+  });
+};
+
 // 3. Get Component by ID
 export const getComponentById = (req, res) => {
   const { id } = req.params;
@@ -93,3 +108,39 @@ export const getComponentsByValueType = (req, res) => {
     }
   );
 };
+
+
+//7.Get Total free leaves for that month year
+export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
+  const { employee_id, monthYear } = req.params; // monthYear format should be MM-YYYY
+
+  // Split MM-YYYY
+  const [month, year] = monthYear.split('-');
+
+  const query = `
+    SELECT 
+      SUM(la.no_of_days) AS total_free_leaves
+    FROM 
+      leave_applications la
+    JOIN 
+      hr_leave_policy hp ON la.leave_type = hp.leave_type
+    WHERE 
+      la.employee_id = ? 
+      AND la.status = 'Approved'
+      AND hp.mode = 'Free'
+      AND MONTH(la.from_date) = ? 
+      AND YEAR(la.from_date) = ?
+  `;
+
+  db.query(query, [employee_id, month, year], (error, results) => {
+    if (error) {
+      console.error('Error fetching free leaves:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    const totalFreeLeaves = results[0].total_free_leaves || 0;
+
+    res.status(200).json({ employee_id, monthYear, totalFreeLeaves });
+  });
+};
+// /api/leaves/free/2/08-2025

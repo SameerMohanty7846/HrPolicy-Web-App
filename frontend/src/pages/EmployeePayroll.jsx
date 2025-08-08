@@ -6,11 +6,12 @@ const EmployeePayroll = () => {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
-  const [basicSalary, setBasicSalary] = useState('');
+  const [basicSalary, setBasicSalary] = useState(0);
   const [showSalaryInput, setShowSalaryInput] = useState(false);
-  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [componentValues, setComponentValues] = useState({});
+  const [freeLeaves, setFreeLeaves] = useState(0);
+  const [leaveDeduction, setLeaveDeduction] = useState(0);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -26,67 +27,179 @@ const EmployeePayroll = () => {
       .catch(error => console.error('Error fetching employees:', error));
 
     // Fetch salary components
-    axios.get('http://localhost:2000/api/salary-components/list')
-      .then(response => setSalaryComponents(response.data))
+    axios.get('http://localhost:2000/api/salary-components/list-without-first')
+      .then(response => {
+        setSalaryComponents(response.data);
+        // Initialize component values
+        const initialValues = {};
+        response.data.forEach(comp => {
+          initialValues[comp.id] = {
+            enabled: false,
+            value: '',
+            type: comp.type,
+            value_type: comp.value_type,
+            based_on: comp.based_on,
+            amount: 0
+          };
+        });
+        setComponentValues(initialValues);
+      })
       .catch(error => console.error('Error fetching salary components:', error));
   }, []);
 
   useEffect(() => {
     if (selectedEmployee && selectedMonth && selectedYear) {
-      const emp = employees.find(e => e.id === selectedEmployee);
-      setSelectedEmployeeDetails(emp);
       setShowSalaryInput(true);
+      // Fetch free leaves for selected employee and month-year
+      const monthNumber = (months.indexOf(selectedMonth) + 1).toString().padStart(2, '0');
+      const monthYear = `${monthNumber}-${selectedYear}`;
       
-      // Initialize component values
-      const initialValues = {};
-      salaryComponents.forEach(comp => {
-        initialValues[comp.id] = {
-          enabled: false,
-          value: '',
-          type: comp.type,
-          value_type: comp.value_type,
-          based_on: comp.based_on,
-          total: 0
-        };
-      });
-      setComponentValues(initialValues);
+      axios.get(`http://localhost:2000/api/leaves/free/${selectedEmployee}/${monthYear}`)
+        .then(response => {
+          const leaves = parseInt(response.data.totalFreeLeaves) || 0;
+          setFreeLeaves(leaves);
+          // Calculate leave deduction (1 day salary deduction per leave)
+          const dailySalary = basicSalary / 30;
+          setLeaveDeduction(dailySalary * leaves);
+        })
+        .catch(error => {
+          console.error('Error fetching free leaves:', error);
+          setFreeLeaves(0);
+          setLeaveDeduction(0);
+        });
     } else {
       setShowSalaryInput(false);
     }
-  }, [selectedEmployee, selectedMonth, selectedYear, employees, salaryComponents]);
+  }, [selectedEmployee, selectedMonth, selectedYear, basicSalary]);
 
-  const handleComponentToggle = (id) => {
+  useEffect(() => {
+    // Recalculate amounts when basic salary changes
+    const updatedValues = {...componentValues};
+    let needsUpdate = false;
+
+    Object.keys(updatedValues).forEach(id => {
+      const comp = updatedValues[id];
+      if (comp.enabled && comp.value_type === 'percentage' && comp.value) {
+        const percentage = parseFloat(comp.value) || 0;
+        const newAmount = (basicSalary * percentage) / 100;
+        if (comp.amount !== newAmount) {
+          updatedValues[id].amount = newAmount;
+          needsUpdate = true;
+        }
+      }
+    });
+
+    if (needsUpdate) {
+      setComponentValues(updatedValues);
+    }
+  }, [basicSalary]);
+
+  const handleComponentToggle = (componentId) => {
     setComponentValues(prev => ({
       ...prev,
-      [id]: {
-        ...prev[id],
-        enabled: !prev[id]?.enabled,
-        value: prev[id]?.enabled ? '' : prev[id]?.value
+      [componentId]: {
+        ...prev[componentId],
+        enabled: !prev[componentId].enabled,
+        value: prev[componentId].enabled ? '' : prev[componentId].value,
+        amount: prev[componentId].enabled ? 0 : calculateAmount(componentId, prev[componentId].value)
       }
     }));
   };
 
-  const handleValueChange = (id, value) => {
-    setComponentValues(prev => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        value: value,
-        total: calculateTotal(id, value, prev[id])
-      }
-    }));
-  };
-
-  const calculateTotal = (id, value, component) => {
+  const calculateAmount = (componentId, value) => {
     if (!value) return 0;
     
+    const component = salaryComponents.find(c => c.id === parseInt(componentId));
+    if (!component) return 0;
+
     if (component.value_type === 'flat') {
       return parseFloat(value) || 0;
     } else if (component.value_type === 'percentage') {
-      const baseValue = component.based_on === 'Basic Salary' ? parseFloat(basicSalary) || 0 : 0;
-      return (baseValue * parseFloat(value) / 100) || 0;
+      const percentage = parseFloat(value) || 0;
+      return (basicSalary * percentage) / 100;
     }
     return 0;
+  };
+
+  const handleValueChange = (componentId, value) => {
+    const amount = calculateAmount(componentId, value);
+    
+    setComponentValues(prev => ({
+      ...prev,
+      [componentId]: {
+        ...prev[componentId],
+        value: value,
+        amount: amount
+      }
+    }));
+  };
+
+  // Calculate salary summary - now includes leave deduction
+  const calculateSalarySummary = () => {
+    let totalEarnings = 0;
+    let totalDeductions = 0;
+
+    Object.values(componentValues).forEach(comp => {
+      if (comp.enabled) {
+        if (comp.type === 'earning') {
+          totalEarnings += comp.amount;
+        } else if (comp.type === 'deduction') {
+          totalDeductions += comp.amount;
+        }
+      }
+    });
+
+    // Add leave deduction to total deductions
+    totalDeductions += leaveDeduction;
+
+    const grossSalary = basicSalary + totalEarnings;
+    const netSalary = grossSalary - totalDeductions;
+
+    return {
+      basicSalary,
+      totalEarnings,
+      totalDeductions,
+      grossSalary,
+      netSalary,
+      freeLeaves,
+      leaveDeduction
+    };
+  };
+
+  const salarySummary = calculateSalarySummary();
+
+  const handleSubmit = () => {
+    const payload = {
+      employeeId: selectedEmployee,
+      month: selectedMonth,
+      year: selectedYear,
+      basicSalary: basicSalary,
+      components: Object.entries(componentValues)
+        .filter(([_, comp]) => comp.enabled)
+        .map(([id, comp]) => ({
+          componentId: parseInt(id),
+          value: comp.value,
+          amount: comp.amount,
+          type: comp.type
+        })),
+      freeLeaves: freeLeaves,
+      leaveDeduction: leaveDeduction,
+      grossSalary: salarySummary.grossSalary,
+      totalDeductions: salarySummary.totalDeductions,
+      netSalary: salarySummary.netSalary
+    };
+
+    console.log('Payload to be submitted:', payload);
+    // Here you would call your API to save the payroll data
+    // axios.post('http://localhost:2000/api/payroll/save', payload)
+    //   .then(response => {
+    //     console.log('Payroll saved successfully:', response);
+    //     alert('Payroll saved successfully!');
+    //   })
+    //   .catch(error => {
+    //     console.error('Error saving payroll:', error);
+    //     alert('Error saving payroll!');
+    //   });
   };
 
   return (
@@ -155,14 +268,14 @@ const EmployeePayroll = () => {
                     type="number"
                     className="form-control form-control-sm"
                     value={basicSalary}
-                    onChange={(e) => setBasicSalary(e.target.value)}
+                    onChange={(e) => setBasicSalary(parseFloat(e.target.value) || 0)}
                     placeholder="Enter basic salary"
                   />
                 </div>
               </div>
 
               {/* Salary Components Table */}
-              <div className="table-responsive">
+              <div className="table-responsive mb-4">
                 <table className="table table-sm table-bordered">
                   <thead className="table-light">
                     <tr>
@@ -186,14 +299,9 @@ const EmployeePayroll = () => {
                         </td>
                         <td>{component.name}</td>
                         <td>
-                          <select
-                            className="form-select form-select-sm"
-                            value={componentValues[component.id]?.type || ''}
-                            disabled
-                          >
-                            <option value="earning">Earning</option>
-                            <option value="deduction">Deduction</option>
-                          </select>
+                          <span className={`badge ${component.type === 'earning' ? 'bg-success' : 'bg-danger'}`}>
+                            {component.type}
+                          </span>
                         </td>
                         <td>
                           {componentValues[component.id]?.enabled ? (
@@ -226,7 +334,7 @@ const EmployeePayroll = () => {
                         </td>
                         <td className="text-end">
                           {componentValues[component.id]?.enabled ? (
-                            componentValues[component.id]?.total.toFixed(2)
+                            componentValues[component.id]?.amount.toFixed(2)
                           ) : (
                             <span className="text-muted">-</span>
                           )}
@@ -235,6 +343,54 @@ const EmployeePayroll = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Salary Summary */}
+              <div className="card bg-light mb-3">
+                <div className="card-body p-3">
+                  <h6 className="small fw-bold mb-3">Salary Summary</h6>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Basic Salary:</span>
+                        <span className="small fw-bold">₹{salarySummary.basicSalary.toFixed(2)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Total Earnings:</span>
+                        <span className="small fw-bold text-success">₹{salarySummary.totalEarnings.toFixed(2)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Total Deductions:</span>
+                        <span className="small fw-bold text-danger">₹{salarySummary.totalDeductions.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Gross Salary:</span>
+                        <span className="small fw-bold">₹{salarySummary.grossSalary.toFixed(2)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Leave Deductions:</span>
+                        <span className="small fw-bold text-danger">₹{salarySummary.leaveDeduction.toFixed(2)} ({salarySummary.freeLeaves} days)</span>
+                      </div>
+                      <div className="d-flex justify-content-between">
+                        <span className="small">Net Salary:</span>
+                        <span className="small fw-bold text-primary">₹{salarySummary.netSalary.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="text-end">
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={handleSubmit}
+                  disabled={!basicSalary || basicSalary <= 0}
+                >
+                  Save Payroll
+                </button>
               </div>
             </div>
           )}

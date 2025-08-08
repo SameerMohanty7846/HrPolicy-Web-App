@@ -60,7 +60,7 @@ import {
   getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
 import { getAttendanceReport, getMonthlySalaryReport, insertSalaryReport } from "../controller/employee.attendance.controller.js";
-import { createSalaryComponent, getAllSalaryComponents, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType } from "../controller/salary.component.controller.js";
+import { createSalaryComponent, getAllSalaryComponents, getAllSalaryComponentsExcludingFirst, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType, getFreeLeavesByEmployeeAndMonth } from "../controller/salary.component.controller.js";
 
 const router = express.Router();
 
@@ -146,8 +146,17 @@ router.post('/submit-salary-report', insertSalaryReport);
 //Salary Component Master
 router.post('/salary-components/create', createSalaryComponent);
 router.get('/salary-components/list', getAllSalaryComponents);
+router.get('/salary-components/list-without-first', getAllSalaryComponentsExcludingFirst);
+
 router.get('/salary-components/view/id/:id', getComponentById);
 router.get('/salary-components/view/name/:name', getComponentByName);
 router.get('/salary-components/filter/type/:type', getComponentsByType);
 router.get('/salary-components/filter/value-type/:value_type', getComponentsByValueType);
+
+//monthly-free leaves report
+// /api/leaves/free/2/08-2025
+//employee_id, monthYear
+router.get('/leaves/free/:employee_id/:monthYear', getFreeLeavesByEmployeeAndMonth);
+
+
 export default router;
