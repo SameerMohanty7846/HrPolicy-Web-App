@@ -37,9 +37,10 @@ const EmployeePayroll = () => {
             enabled: false,
             value: '',
             type: comp.type,
-            value_type: 'percentage', // Default to percentage
+            value_type: comp.days_calculated === 1 ? 'days' : 'percentage', // Default to percentage or days
             based_on: comp.based_on,
-            amount: 0
+            amount: 0,
+            days: 0 // For days_calculated components
           };
         });
         setComponentValues(initialValues);
@@ -79,11 +80,24 @@ const EmployeePayroll = () => {
 
     Object.keys(updatedValues).forEach(id => {
       const comp = updatedValues[id];
-      if (comp.enabled && comp.value) {
-        const newAmount = calculateAmount(id, comp.value, comp.value_type);
-        if (comp.amount !== newAmount) {
-          updatedValues[id].amount = newAmount;
-          needsUpdate = true;
+      if (comp.enabled) {
+        const component = salaryComponents.find(c => c.id === parseInt(id));
+        if (component) {
+          let newAmount = 0;
+          
+          if (component.days_calculated === 1) {
+            // Calculate based on days
+            const dailySalary = basicSalary / 30;
+            newAmount = dailySalary * (comp.days || 0);
+          } else {
+            // Calculate based on value type (percentage/flat)
+            newAmount = calculateAmount(id, comp.value, comp.value_type);
+          }
+          
+          if (comp.amount !== newAmount) {
+            updatedValues[id].amount = newAmount;
+            needsUpdate = true;
+          }
         }
       }
     });
@@ -94,13 +108,19 @@ const EmployeePayroll = () => {
   }, [basicSalary, componentValues]);
 
   const handleComponentToggle = (componentId) => {
+    const component = salaryComponents.find(c => c.id === parseInt(componentId));
+    
     setComponentValues(prev => ({
       ...prev,
       [componentId]: {
         ...prev[componentId],
         enabled: !prev[componentId].enabled,
         value: prev[componentId].enabled ? '' : prev[componentId].value,
-        amount: prev[componentId].enabled ? 0 : calculateAmount(componentId, prev[componentId].value, prev[componentId].value_type)
+        days: prev[componentId].enabled ? 0 : prev[componentId].days,
+        amount: prev[componentId].enabled ? 0 : 
+          component.days_calculated === 1 ? 
+            (basicSalary / 30) * (prev[componentId].days || 0) : 
+            calculateAmount(componentId, prev[componentId].value, prev[componentId].value_type)
       }
     }));
   };
@@ -129,6 +149,20 @@ const EmployeePayroll = () => {
       [componentId]: {
         ...prev[componentId],
         value: value,
+        amount: amount
+      }
+    }));
+  };
+
+  const handleDaysChange = (componentId, days) => {
+    const dailySalary = basicSalary / 30;
+    const amount = dailySalary * (parseInt(days) || 0);
+    
+    setComponentValues(prev => ({
+      ...prev,
+      [componentId]: {
+        ...prev[componentId],
+        days: parseInt(days) || 0,
         amount: amount
       }
     }));
@@ -182,34 +216,35 @@ const EmployeePayroll = () => {
 
   const salarySummary = calculateSalarySummary();
 
-const handleSubmit = async () => {
-  const monthNumber = months.indexOf(selectedMonth) + 1;
-  const salarySummary = calculateSalarySummary();
+  const handleSubmit = async () => {
+    const monthNumber = months.indexOf(selectedMonth) + 1;
+    const salarySummary = calculateSalarySummary();
 
-  const payload = {
-    employee_id: Number(selectedEmployee),
-    month: monthNumber,
-    year: Number(selectedYear),
-    basic_salary: Number(basicSalary),
-    total_earnings: Number(salarySummary.totalEarnings.toFixed(2)),
-    total_deductions: Number(salarySummary.totalDeductions.toFixed(2)),
-    gross_salary: Number((basicSalary + salarySummary.totalEarnings).toFixed(2)),
-    leave_deductions: Number(salarySummary.leaveDeduction.toFixed(2)),
-    leave_days: Number(freeLeaves),
-    net_salary: Number(salarySummary.netSalary.toFixed(2))
+    const payload = {
+      employee_id: Number(selectedEmployee),
+      month: monthNumber,
+      year: Number(selectedYear),
+      basic_salary: Number(basicSalary),
+      total_earnings: Number(salarySummary.totalEarnings.toFixed(2)),
+      total_deductions: Number(salarySummary.totalDeductions.toFixed(2)),
+      gross_salary: Number((basicSalary + salarySummary.totalEarnings).toFixed(2)),
+      leave_deductions: Number(salarySummary.leaveDeduction.toFixed(2)),
+      leave_days: Number(freeLeaves),
+      net_salary: Number(salarySummary.netSalary.toFixed(2))
+    };
+
+    console.log("Final payload:", payload);
+
+    try {
+      const response = await axios.post('http://localhost:2000/api/payroll', payload);
+      console.log('Success:', response.data);
+      alert('Payroll saved successfully!');
+    } catch (error) {
+      console.error('Error:', error.response?.data || error.message);
+      alert(`Error: ${error.response?.data?.message || 'Failed to save payroll'}`);
+    }
   };
 
-  console.log("Final payload:", payload);
-
-  try {
-    const response = await axios.post('http://localhost:2000/api/payroll', payload);
-    console.log('Success:', response.data);
-    alert('Payroll saved successfully!');
-  } catch (error) {
-    console.error('Error:', error.response?.data || error.message);
-    alert(`Error: ${error.response?.data?.message || 'Failed to save payroll'}`);
-  }
-};
   return (
     <div className="container mt-3">
       <div className="card shadow-sm">
@@ -290,80 +325,97 @@ const handleSubmit = async () => {
                       <th width="5%">Include</th>
                       <th width="20%">Component</th>
                       <th width="15%">Type</th>
-                      <th width="15%">Value Type</th>
+                      <th width="15%">Input Type</th>
                       <th width="20%">Value</th>
                       <th width="15%">Based On</th>
                       <th width="10%">Amount (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {salaryComponents.map(component => (
-                      <tr key={component.id} className={componentValues[component.id]?.enabled ? '' : 'text-muted'}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={componentValues[component.id]?.enabled || false}
-                            onChange={() => handleComponentToggle(component.id)}
-                          />
-                        </td>
-                        <td>{component.name}</td>
-                        <td>
-                          <span className={`badge ${component.type === 'earning' ? 'bg-success' : 'bg-danger'}`}>
-                            {component.type}
-                          </span>
-                        </td>
-                        <td>
-                          {componentValues[component.id]?.enabled ? (
-                            <select
-                              className="form-select form-select-sm"
-                              value={componentValues[component.id]?.value_type || 'percentage'}
-                              onChange={(e) => handleValueTypeChange(component.id, e.target.value)}
-                            >
-                              <option value="percentage">Percentage</option>
-                              <option value="flat">Flat</option>
-                            </select>
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                        <td>
-                          {componentValues[component.id]?.enabled ? (
-                            componentValues[component.id]?.value_type === 'flat' ? (
-                              <input
-                                type="number"
-                                className="form-control form-control-sm"
-                                value={componentValues[component.id]?.value || ''}
-                                onChange={(e) => handleValueChange(component.id, e.target.value)}
-                                placeholder="Enter amount"
-                              />
+                    {salaryComponents.map(component => {
+                      const isDaysCalculated = component.days_calculated === 1;
+                      const componentValue = componentValues[component.id];
+                      
+                      return (
+                        <tr key={component.id} className={componentValue?.enabled ? '' : 'text-muted'}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={componentValue?.enabled || false}
+                              onChange={() => handleComponentToggle(component.id)}
+                            />
+                          </td>
+                          <td>{component.name}</td>
+                          <td>
+                            <span className={`badge ${component.type === 'earning' ? 'bg-success' : 'bg-danger'}`}>
+                              {component.type}
+                            </span>
+                          </td>
+                          <td>
+                            {componentValue?.enabled ? (
+                              isDaysCalculated ? (
+                                <span className="small">Days</span>
+                              ) : (
+                                <select
+                                  className="form-select form-select-sm"
+                                  value={componentValue?.value_type || 'percentage'}
+                                  onChange={(e) => handleValueTypeChange(component.id, e.target.value)}
+                                >
+                                  <option value="percentage">Percentage</option>
+                                  <option value="flat">Flat</option>
+                                </select>
+                              )
                             ) : (
-                              <div className="input-group input-group-sm">
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {componentValue?.enabled ? (
+                              isDaysCalculated ? (
                                 <input
                                   type="number"
-                                  className="form-control"
-                                  value={componentValues[component.id]?.value || ''}
-                                  onChange={(e) => handleValueChange(component.id, e.target.value)}
-                                  placeholder="Percentage"
+                                  className="form-control form-control-sm"
+                                  value={componentValue?.days || ''}
+                                  onChange={(e) => handleDaysChange(component.id, e.target.value)}
+                                  placeholder="Enter days"
                                 />
-                                <span className="input-group-text">%</span>
-                              </div>
-                            )
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                        <td>
-                          {component.based_on || '-'}
-                        </td>
-                        <td className="text-end">
-                          {componentValues[component.id]?.enabled ? (
-                            componentValues[component.id]?.amount.toFixed(2)
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              ) : componentValue?.value_type === 'flat' ? (
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm"
+                                  value={componentValue?.value || ''}
+                                  onChange={(e) => handleValueChange(component.id, e.target.value)}
+                                  placeholder="Enter amount"
+                                />
+                              ) : (
+                                <div className="input-group input-group-sm">
+                                  <input
+                                    type="number"
+                                    className="form-control"
+                                    value={componentValue?.value || ''}
+                                    onChange={(e) => handleValueChange(component.id, e.target.value)}
+                                    placeholder="Percentage"
+                                  />
+                                  <span className="input-group-text">%</span>
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {component.based_on || '-'}
+                          </td>
+                          <td className="text-end">
+                            {componentValue?.enabled ? (
+                              componentValue?.amount.toFixed(2)
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

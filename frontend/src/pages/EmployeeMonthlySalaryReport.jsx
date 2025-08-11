@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
     color: '#333'
   },
-  
+
   // Header Styles
   headerContainer: {
     flexDirection: 'row',
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#7f8c8d'
   },
-  
+
   // Report Title
   reportTitleContainer: {
     marginBottom: 20,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7f8c8d'
   },
-  
+
   // Sections
   section: {
     marginBottom: 20
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     paddingBottom: 5
   },
-  
+
   // Info Grid
   infoGrid: {
     flexDirection: 'column'
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   infoValue: {
     flex: 1
   },
-  
+
   // Table Styles
   table: {
     display: 'table',
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold'
   },
-  
+
   // Footer
   footer: {
     position: 'absolute',
@@ -169,8 +169,8 @@ const EmployeePayrollPDF = ({ data }) => (
       <View style={styles.headerContainer}>
         <View style={styles.logoContainer}>
           {/* Replace with your actual logo - either base64 or URL */}
-          <Image 
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAZCAMAAABn0dyjAAAAeFBMVEVHcEzQ2cWZnZaCg4R/f4F6e3xpaWthYmRoaWtub3G/0Ki6u7mMjI1bXF5gYGNdXWB/gX9gYWNlZmiLi4ynt5OmpqdsbW+1tbZ4eHqLjI1TVFaEhoWdvHaFq1WPs2CWs3F0dnR8pUp6pEeGq1iNqWtjY2Z4oUKBqU+LEb/aAAAAKHRSTlMABjV1r8vh/OzRDxqB/+D2iez4ZilWs0FVRP+WS3Z+bJ3R3auVy//AHsCXXAAAAV5JREFUeAF1kgWCxCAMRQPUIXjdR+9/w62v/5n6iwcuEcqCMIrjJA0YzeCnuIhilFJpbYzEOBL822ciLKaRA04BPIc8KtCKL17KFLEC8sUA6hij8vpuFat+RCWVM/FBlHHTwh8SDeawKEuUoJfhogwIr1nBvTB2TbVd7An3Xdf3wzCOo56KCLFBvvoIALzFCeh8m++PRzs9DaIyz0JXNQHQKqbAkMGCueIpEU06uYry7u5hk2sEhA3bMtFsHD3A/TWup+4EQohQHA14v3rI5m8AwwSsPAuYfwOQxpAgI/8CTiVLDvp/D2zJQSD7F9iqoFZN/wFbH7ZObsDtBMjjTWlFj04CTxTbZjFcHrybnrLibp8F5Hj48P4Avk9z2wdX7bVmayevfcivjYmujSJjd25UUsKlTMdYpA4yD8AzqNMC45Z/2zAuIsSnNEJI+URMWg8/lVERpMnyLQ1E/Wn9ARtjH0l/GfPXAAAAAElFTkSuQmCC" 
+          <Image
+            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAZCAMAAABn0dyjAAAAeFBMVEVHcEzQ2cWZnZaCg4R/f4F6e3xpaWthYmRoaWtub3G/0Ki6u7mMjI1bXF5gYGNdXWB/gX9gYWNlZmiLi4ynt5OmpqdsbW+1tbZ4eHqLjI1TVFaEhoWdvHaFq1WPs2CWs3F0dnR8pUp6pEeGq1iNqWtjY2Z4oUKBqU+LEb/aAAAAKHRSTlMABjV1r8vh/OzRDxqB/+D2iez4ZilWs0FVRP+WS3Z+bJ3R3auVy//AHsCXXAAAAV5JREFUeAF1kgWCxCAMRQPUIXjdR+9/w62v/5n6iwcuEcqCMIrjJA0YzeCnuIhilFJpbYzEOBL822ciLKaRA04BPIc8KtCKL17KFLEC8sUA6hij8vpuFat+RCWVM/FBlHHTwh8SDeawKEuUoJfhogwIr1nBvTB2TbVd7An3Xdf3wzCOo56KCLFBvvoIALzFCeh8m++PRzs9DaIyz0JXNQHQKqbAkMGCueIpEU06uYry7u5hk2sEhA3bMtFsHD3A/TWup+4EQohQHA14v3rI5m8AwwSsPAuYfwOQxpAgI/8CTiVLDvp/D2zJQSD7F9iqoFZN/wFbH7ZObsDtBMjjTWlFj04CTxTbZjFcHrybnrLibp8F5Hj48P4Avk9z2wdX7bVmayevfcivjYmujSJjd25UUsKlTMdYpA4yD8AzqNMC45Z/2zAuIsSnNEJI+URMWg8/lVERpMnyLQ1E/Wn9ARtjH0l/GfPXAAAAAElFTkSuQmCC"
             style={{ width: 80, height: 80 }}
           />
         </View>
@@ -407,7 +407,7 @@ const EmployeeMonthlySalaryReport = () => {
         <div className="card-header bg-primary text-white">
           <h2 className="mb-0 text-center">Monthly Payroll Report</h2>
         </div>
-        
+
         <div className="card-body">
           {/* Filter Controls */}
           <div className="row mb-4 g-3">

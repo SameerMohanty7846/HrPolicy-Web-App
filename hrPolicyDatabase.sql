@@ -243,6 +243,7 @@ delete from salary_component_policy_master WHERE id=3;
 drop table salary_component_policy_master;
 select * from salary_component_policy_master;
 
+drop table  payroll_master;
 CREATE TABLE payroll_master (
     payroll_id INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT NOT NULL,
@@ -258,10 +259,11 @@ CREATE TABLE payroll_master (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE (employee_id, month, year),
-    FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
         ON DELETE CASCADE
         ON UPDATE CASCADE
 );
+select * from payroll_master;
 CREATE TABLE payroll_components (
     component_id INT PRIMARY KEY AUTO_INCREMENT,
     payroll_id INT NOT NULL,
@@ -274,8 +276,8 @@ CREATE TABLE payroll_components (
         ON UPDATE CASCADE
 );
 
-
-drop table employee_payroll;
+show tables;
+drop table payroll_components;
 
 
 
