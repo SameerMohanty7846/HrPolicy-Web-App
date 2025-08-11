@@ -227,6 +227,41 @@ CREATE TABLE monthly_salary_reports (
   net_salary DECIMAL(10,2),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+drop table monthly_salary_reports;
+
+
+CREATE TABLE salary_component_policy_master (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    type ENUM('earning', 'deduction') NOT NULL,
+    value_type ENUM('flat', 'percentage') NOT NULL,
+    based_on VARCHAR(50)
+);
+delete from salary_component_policy_master WHERE id=3;
+drop table salary_component_policy_master;
+select * from salary_component_policy_master;
+
+CREATE TABLE employee_payroll (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    employee_id INT NOT NULL,
+    employee_name VARCHAR(20),
+    month INT NOT NULL,                    -- 1 = Jan, 2 = Feb, etc.
+    year INT NOT NULL,                     -- e.g., 2024
+    basic_salary DECIMAL(10,2) NOT NULL,   -- Common for all rows of that emp-month
+    gross_salary DECIMAL(10,2),            -- Can be stored in just one row for that emp-month (others can be NULL)
+    net_salary DECIMAL(10,2),              -- Same as above
+    component_name VARCHAR(50) NOT NULL,   -- HRA, DA, etc.
+    component_type ENUM('earning', 'deduction') NOT NULL,
+    value DECIMAL(5,2),                    -- % or fixed (as per based_on)
+    based_on VARCHAR(50),                 -- e.g., 'Basic Salary' or NULL
+    amount DECIMAL(10,2),                 -- Final ₹ amount of this component
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    UNIQUE KEY unique_component (employee_id, month, year, component_name)
+);
+drop table employee_payroll;
+
+
 
 
 -- for retrirving all the details of all employees about their leaves-- 
