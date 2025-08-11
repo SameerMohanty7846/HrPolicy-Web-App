@@ -161,7 +161,8 @@ router.get('/leaves/free/:employee_id/:monthYear', getFreeLeavesByEmployeeAndMon
 //save payroll
 router.post('/payroll', createPayroll);
 // Route with three path params
-router.get('/payroll-list/:employee_id/:month/:year', getAllPayrolls);
+// Instead of :employee_id/:month/:year
+router.get('/payroll-list/:month/:year', getAllPayrolls);
 
 
 export default router;

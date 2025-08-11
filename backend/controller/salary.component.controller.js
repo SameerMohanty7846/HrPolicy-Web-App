@@ -275,11 +275,10 @@ export const createPayroll = async (req, res) => {
   }
 };
 
-
-// Get filtered payroll records by employee_id, month, and year
+// Get payroll records for ALL employees for a specific month/year
 export const getAllPayrolls = async (req, res) => {
   try {
-    const { employee_id, month, year } = req.params; // Get path params
+    const { month, year } = req.params; // Only month and year from route
 
     // Month names for formatting
     const months = [
@@ -287,7 +286,7 @@ export const getAllPayrolls = async (req, res) => {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
-    // SQL query with WHERE clause for filtering
+    // SQL query without employee_id filter
     const sql = `
       SELECT 
         p.payroll_id,
@@ -314,14 +313,14 @@ export const getAllPayrolls = async (req, res) => {
         e.department AS emp_department
       FROM payroll_master p
       JOIN employees e ON p.employee_id = e.id
-      WHERE p.employee_id = ? AND p.month = ? AND p.year = ?
-      ORDER BY p.year DESC, p.month DESC, e.name ASC
+      WHERE p.month = ? AND p.year = ?
+      ORDER BY e.name ASC
     `;
 
-    // Execute query with filtering params
-    const [results] = await db.promise().query(sql, [employee_id, month, year]);
+    // Execute query
+    const [results] = await db.promise().query(sql, [month, year]);
 
-    // Format the results
+    // Format results
     const formattedResults = results.map(record => ({
       payroll_id: record.payroll_id,
       employee: {
@@ -358,7 +357,6 @@ export const getAllPayrolls = async (req, res) => {
       }
     }));
 
-    // Return successful response
     res.status(200).json({
       success: true,
       count: formattedResults.length,
