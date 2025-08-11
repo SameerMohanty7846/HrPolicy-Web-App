@@ -182,41 +182,34 @@ const EmployeePayroll = () => {
 
   const salarySummary = calculateSalarySummary();
 
-  const handleSubmit = () => {
-    const payload = {
-      employeeId: selectedEmployee,
-      month: selectedMonth,
-      year: selectedYear,
-      basicSalary: basicSalary,
-      components: Object.entries(componentValues)
-        .filter(([_, comp]) => comp.enabled)
-        .map(([id, comp]) => ({
-          componentId: parseInt(id),
-          value: comp.value,
-          value_type: comp.value_type,
-          amount: comp.amount,
-          type: comp.type
-        })),
-      freeLeaves: freeLeaves,
-      leaveDeduction: leaveDeduction,
-      grossSalary: salarySummary.grossSalary,
-      totalDeductions: salarySummary.totalDeductions,
-      netSalary: salarySummary.netSalary
-    };
+const handleSubmit = async () => {
+  const monthNumber = months.indexOf(selectedMonth) + 1;
+  const salarySummary = calculateSalarySummary();
 
-    console.log('Payload to be submitted:', payload);
-    // Here you would call your API to save the payroll data
-    // axios.post('http://localhost:2000/api/payroll/save', payload)
-    //   .then(response => {
-    //     console.log('Payroll saved successfully:', response);
-    //     alert('Payroll saved successfully!');
-    //   })
-    //   .catch(error => {
-    //     console.error('Error saving payroll:', error);
-    //     alert('Error saving payroll!');
-    //   });
+  const payload = {
+    employee_id: Number(selectedEmployee),
+    month: monthNumber,
+    year: Number(selectedYear),
+    basic_salary: Number(basicSalary),
+    total_earnings: Number(salarySummary.totalEarnings.toFixed(2)),
+    total_deductions: Number(salarySummary.totalDeductions.toFixed(2)),
+    gross_salary: Number((basicSalary + salarySummary.totalEarnings).toFixed(2)),
+    leave_deductions: Number(salarySummary.leaveDeduction.toFixed(2)),
+    leave_days: Number(freeLeaves),
+    net_salary: Number(salarySummary.netSalary.toFixed(2))
   };
 
+  console.log("Final payload:", payload);
+
+  try {
+    const response = await axios.post('http://localhost:2000/api/payroll', payload);
+    console.log('Success:', response.data);
+    alert('Payroll saved successfully!');
+  } catch (error) {
+    console.error('Error:', error.response?.data || error.message);
+    alert(`Error: ${error.response?.data?.message || 'Failed to save payroll'}`);
+  }
+};
   return (
     <div className="container mt-3">
       <div className="card shadow-sm">
