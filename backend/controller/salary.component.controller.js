@@ -2,18 +2,19 @@ import db from '../config/db.js';
 
 // 1. Create Salary Component
 export const createSalaryComponent = (req, res) => {
-  const { name, type, value_type, based_on } = req.body;
+  const { name, type, based_on, days_calculated } = req.body;
 
-  if (!name || !type || !value_type) {
+  if (!name || !type) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const basedOnValue = value_type === 'percentage' ? based_on : null;
+  // If days_calculated is not provided, default to 1 (Yes)
+  const daysCalculatedValue = days_calculated !== undefined ? days_calculated : 1;
 
   db.query(
-    `INSERT INTO salary_component_policy_master (name, type, value_type, based_on)
+    `INSERT INTO salary_component_policy_master (name, type, based_on, days_calculated)
      VALUES (?, ?, ?, ?)`,
-    [name, type, value_type, basedOnValue],
+    [name, type, based_on || null, daysCalculatedValue],
     (error, result) => {
       if (error) {
         console.error('Error inserting salary component:', error);
@@ -23,6 +24,7 @@ export const createSalaryComponent = (req, res) => {
     }
   );
 };
+
 
 // 2. Get All Components
 export const getAllSalaryComponents = (req, res) => {
@@ -144,3 +146,6 @@ export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
   });
 };
 // /api/leaves/free/2/08-2025
+
+
+//save payroll

@@ -5,8 +5,8 @@ const SalaryPolicyForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     type: 'earning',
-    value_type: 'flat',
-    based_on: ''
+    based_on: '',
+    days_calculated: '1' // default Yes
   });
 
   const [components, setComponents] = useState([]);
@@ -22,8 +22,8 @@ const SalaryPolicyForm = () => {
     const payload = {
       name: formData.name,
       type: formData.type,
-      value_type: formData.value_type,
-      based_on: formData.value_type === 'percentage' ? formData.based_on : null
+      based_on: formData.based_on || null,
+      days_calculated: formData.days_calculated
     };
 
     try {
@@ -32,8 +32,8 @@ const SalaryPolicyForm = () => {
       setFormData({
         name: '',
         type: 'earning',
-        value_type: 'flat',
-        based_on: ''
+        based_on: '',
+        days_calculated: '1'
       });
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -42,7 +42,7 @@ const SalaryPolicyForm = () => {
 
   const fetchComponents = async () => {
     try {
-      const response = await axios.get('http://localhost:2000/api/salary-components/list')
+      const response = await axios.get('http://localhost:2000/api/salary-components/list');
       setComponents(response.data);
     } catch (error) {
       console.error('Error fetching components:', error);
@@ -62,6 +62,7 @@ const SalaryPolicyForm = () => {
         
         <div className="card-body">
           <div className="row">
+            {/* Form Section */}
             <div className="col-md-6">
               <div className="card mb-4">
                 <div className="card-header bg-light">
@@ -69,6 +70,7 @@ const SalaryPolicyForm = () => {
                 </div>
                 <div className="card-body">
                   <form onSubmit={handleSubmit}>
+                    {/* Component Name */}
                     <div className="mb-3">
                       <label className="form-label fw-bold">Component Name</label>
                       <input
@@ -81,6 +83,7 @@ const SalaryPolicyForm = () => {
                       />
                     </div>
 
+                    {/* Type & Days Calculated */}
                     <div className="row mb-3">
                       <div className="col-md-6">
                         <label className="form-label fw-bold">Type</label>
@@ -95,34 +98,33 @@ const SalaryPolicyForm = () => {
                         </select>
                       </div>
                       <div className="col-md-6">
-                        <label className="form-label fw-bold">Value Type</label>
+                        <label className="form-label fw-bold">Days Calculated</label>
                         <select
                           className="form-select"
-                          name="value_type"
-                          value={formData.value_type}
+                          name="days_calculated"
+                          value={formData.days_calculated}
                           onChange={handleChange}
                         >
-                          <option value="flat">Flat</option>
-                          <option value="percentage">Percentage</option>
+                          <option value="1">Yes</option>
+                          <option value="0">No</option>
                         </select>
                       </div>
                     </div>
 
-                    {formData.value_type === 'percentage' && (
-                      <div className="mb-3">
-                        <label className="form-label fw-bold">Based On</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="based_on"
-                          value={formData.based_on}
-                          onChange={handleChange}
-                          required
-                          placeholder="Eg: Basic Salary"
-                        />
-                      </div>
-                    )}
+                    {/* Based On */}
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Based On</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="based_on"
+                        value={formData.based_on}
+                        onChange={handleChange}
+                        placeholder="Eg: Basic Salary"
+                      />
+                    </div>
 
+                    {/* Submit */}
                     <div className="d-grid">
                       <button type="submit" className="btn btn-primary">
                         <i className="bi bi-plus-circle me-2"></i>Add Component
@@ -133,6 +135,7 @@ const SalaryPolicyForm = () => {
               </div>
             </div>
 
+            {/* Table Section */}
             <div className="col-md-6">
               <div className="card">
                 <div className="card-header bg-light">
@@ -140,7 +143,9 @@ const SalaryPolicyForm = () => {
                 </div>
                 <div className="card-body">
                   {components.length === 0 ? (
-                    <div className="alert alert-info mb-0">No salary components found. Please add some.</div>
+                    <div className="alert alert-info mb-0">
+                      No salary components found. Please add some.
+                    </div>
                   ) : (
                     <div className="table-responsive">
                       <table className="table table-striped table-hover">
@@ -149,8 +154,8 @@ const SalaryPolicyForm = () => {
                             <th>ID</th>
                             <th>Name</th>
                             <th>Type</th>
-                            <th>Value Type</th>
                             <th>Based On</th>
+                            <th>Days Calculated</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -159,16 +164,16 @@ const SalaryPolicyForm = () => {
                               <td>{comp.id}</td>
                               <td>{comp.name}</td>
                               <td>
-                                <span className={`badge ${comp.type === 'earning' ? 'bg-success' : 'bg-danger'}`}>
+                                <span
+                                  className={`badge ${
+                                    comp.type === 'earning' ? 'bg-success' : 'bg-danger'
+                                  }`}
+                                >
                                   {comp.type}
                                 </span>
                               </td>
-                              <td>
-                                <span className="badge bg-info text-dark">
-                                  {comp.value_type}
-                                </span>
-                              </td>
                               <td>{comp.based_on || '-'}</td>
+                              <td>{comp.days_calculated === 1 ? 'Yes' : 'No'}</td>
                             </tr>
                           ))}
                         </tbody>

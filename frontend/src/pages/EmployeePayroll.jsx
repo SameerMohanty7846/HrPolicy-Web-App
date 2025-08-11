@@ -37,7 +37,7 @@ const EmployeePayroll = () => {
             enabled: false,
             value: '',
             type: comp.type,
-            value_type: comp.value_type,
+            value_type: 'percentage', // Default to percentage
             based_on: comp.based_on,
             amount: 0
           };
@@ -73,15 +73,14 @@ const EmployeePayroll = () => {
   }, [selectedEmployee, selectedMonth, selectedYear, basicSalary]);
 
   useEffect(() => {
-    // Recalculate amounts when basic salary changes
+    // Recalculate amounts when basic salary changes or value_type changes
     const updatedValues = {...componentValues};
     let needsUpdate = false;
 
     Object.keys(updatedValues).forEach(id => {
       const comp = updatedValues[id];
-      if (comp.enabled && comp.value_type === 'percentage' && comp.value) {
-        const percentage = parseFloat(comp.value) || 0;
-        const newAmount = (basicSalary * percentage) / 100;
+      if (comp.enabled && comp.value) {
+        const newAmount = calculateAmount(id, comp.value, comp.value_type);
         if (comp.amount !== newAmount) {
           updatedValues[id].amount = newAmount;
           needsUpdate = true;
@@ -92,7 +91,7 @@ const EmployeePayroll = () => {
     if (needsUpdate) {
       setComponentValues(updatedValues);
     }
-  }, [basicSalary]);
+  }, [basicSalary, componentValues]);
 
   const handleComponentToggle = (componentId) => {
     setComponentValues(prev => ({
@@ -101,20 +100,20 @@ const EmployeePayroll = () => {
         ...prev[componentId],
         enabled: !prev[componentId].enabled,
         value: prev[componentId].enabled ? '' : prev[componentId].value,
-        amount: prev[componentId].enabled ? 0 : calculateAmount(componentId, prev[componentId].value)
+        amount: prev[componentId].enabled ? 0 : calculateAmount(componentId, prev[componentId].value, prev[componentId].value_type)
       }
     }));
   };
 
-  const calculateAmount = (componentId, value) => {
+  const calculateAmount = (componentId, value, valueType) => {
     if (!value) return 0;
     
     const component = salaryComponents.find(c => c.id === parseInt(componentId));
     if (!component) return 0;
 
-    if (component.value_type === 'flat') {
+    if (valueType === 'flat') {
       return parseFloat(value) || 0;
-    } else if (component.value_type === 'percentage') {
+    } else if (valueType === 'percentage') {
       const percentage = parseFloat(value) || 0;
       return (basicSalary * percentage) / 100;
     }
@@ -122,13 +121,28 @@ const EmployeePayroll = () => {
   };
 
   const handleValueChange = (componentId, value) => {
-    const amount = calculateAmount(componentId, value);
+    const valueType = componentValues[componentId]?.value_type || 'percentage';
+    const amount = calculateAmount(componentId, value, valueType);
     
     setComponentValues(prev => ({
       ...prev,
       [componentId]: {
         ...prev[componentId],
         value: value,
+        amount: amount
+      }
+    }));
+  };
+
+  const handleValueTypeChange = (componentId, valueType) => {
+    const currentValue = componentValues[componentId]?.value || '';
+    const amount = calculateAmount(componentId, currentValue, valueType);
+    
+    setComponentValues(prev => ({
+      ...prev,
+      [componentId]: {
+        ...prev[componentId],
+        value_type: valueType,
         amount: amount
       }
     }));
@@ -179,6 +193,7 @@ const EmployeePayroll = () => {
         .map(([id, comp]) => ({
           componentId: parseInt(id),
           value: comp.value,
+          value_type: comp.value_type,
           amount: comp.amount,
           type: comp.type
         })),
@@ -280,11 +295,12 @@ const EmployeePayroll = () => {
                   <thead className="table-light">
                     <tr>
                       <th width="5%">Include</th>
-                      <th width="25%">Component</th>
+                      <th width="20%">Component</th>
                       <th width="15%">Type</th>
+                      <th width="15%">Value Type</th>
                       <th width="20%">Value</th>
-                      <th width="20%">Based On</th>
-                      <th width="15%">Amount (₹)</th>
+                      <th width="15%">Based On</th>
+                      <th width="10%">Amount (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -305,7 +321,21 @@ const EmployeePayroll = () => {
                         </td>
                         <td>
                           {componentValues[component.id]?.enabled ? (
-                            component.value_type === 'flat' ? (
+                            <select
+                              className="form-select form-select-sm"
+                              value={componentValues[component.id]?.value_type || 'percentage'}
+                              onChange={(e) => handleValueTypeChange(component.id, e.target.value)}
+                            >
+                              <option value="percentage">Percentage</option>
+                              <option value="flat">Flat</option>
+                            </select>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
+                        </td>
+                        <td>
+                          {componentValues[component.id]?.enabled ? (
+                            componentValues[component.id]?.value_type === 'flat' ? (
                               <input
                                 type="number"
                                 className="form-control form-control-sm"

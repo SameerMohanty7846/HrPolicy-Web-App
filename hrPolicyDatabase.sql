@@ -234,31 +234,47 @@ CREATE TABLE salary_component_policy_master (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
     type ENUM('earning', 'deduction') NOT NULL,
-    value_type ENUM('flat', 'percentage') NOT NULL,
-    based_on VARCHAR(50)
+    based_on VARCHAR(50),
+    days_calculated BOOLEAN NOT NULL DEFAULT 1
 );
+
+drop table salary_component_policy_master;
 delete from salary_component_policy_master WHERE id=3;
 drop table salary_component_policy_master;
 select * from salary_component_policy_master;
 
-CREATE TABLE employee_payroll (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE payroll_master (
+    payroll_id INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT NOT NULL,
-    employee_name VARCHAR(20),
-    month INT NOT NULL,                    -- 1 = Jan, 2 = Feb, etc.
-    year INT NOT NULL,                     -- e.g., 2024
-    basic_salary DECIMAL(10,2) NOT NULL,   -- Common for all rows of that emp-month
-    gross_salary DECIMAL(10,2),            -- Can be stored in just one row for that emp-month (others can be NULL)
-    net_salary DECIMAL(10,2),              -- Same as above
-    component_name VARCHAR(50) NOT NULL,   -- HRA, DA, etc.
-    component_type ENUM('earning', 'deduction') NOT NULL,
-    value DECIMAL(5,2),                    -- % or fixed (as per based_on)
-    based_on VARCHAR(50),                 -- e.g., 'Basic Salary' or NULL
-    amount DECIMAL(10,2),                 -- Final ₹ amount of this component
+    month TINYINT NOT NULL,       -- 1-12 for Jan-Dec
+    year INT NOT NULL,
+    basic_salary DECIMAL(10,2) NOT NULL,
+    total_earnings DECIMAL(10,2) DEFAULT 0,
+    total_deductions DECIMAL(10,2) DEFAULT 0,
+    gross_salary DECIMAL(10,2) DEFAULT 0,
+    leave_deductions DECIMAL(10,2) DEFAULT 0,
+    leave_days INT DEFAULT 0,
+    net_salary DECIMAL(10,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (employee_id) REFERENCES employees(id),
-    UNIQUE KEY unique_component (employee_id, month, year, component_name)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE (employee_id, month, year),
+    FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
+CREATE TABLE payroll_components (
+    component_id INT PRIMARY KEY AUTO_INCREMENT,
+    payroll_id INT NOT NULL,
+    component_name VARCHAR(100) NOT NULL,  -- e.g., HRA, DA, PF
+    component_type ENUM('earning', 'deduction') NOT NULL,
+    amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (payroll_id) REFERENCES payroll_master(payroll_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+
 drop table employee_payroll;
 
 
