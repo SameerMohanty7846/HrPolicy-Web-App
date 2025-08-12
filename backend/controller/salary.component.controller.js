@@ -1,4 +1,5 @@
 import db from '../config/db.js';
+import moment from 'moment'; // Or use JS Date API if you prefer
 
 // 1. Create Salary Component
 export const createSalaryComponent = (req, res) => {
@@ -113,38 +114,87 @@ export const getComponentsByValueType = (req, res) => {
 
 
 //7.Get Total free leaves for that month year
+
 export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
-  const { employee_id, monthYear } = req.params; // monthYear format should be MM-YYYY
+  const { employee_id, monthYear } = req.params; // Format MM-YYYY
 
-  // Split MM-YYYY
-  const [month, year] = monthYear.split('-');
+  let [month, year] = monthYear.split('-');
+  if (month.length === 1) month = '0' + month;
 
-  const query = `
-    SELECT 
-      SUM(la.no_of_days) AS total_free_leaves
-    FROM 
-      leave_applications la
-    JOIN 
-      hr_leave_policy hp ON la.leave_type = hp.leave_type
-    WHERE 
-      la.employee_id = ? 
-      AND la.status = 'Approved'
-      AND hp.mode = 'Free'
-      AND MONTH(la.from_date) = ? 
-      AND YEAR(la.from_date) = ?
+  const daysInMonth = moment(`${year}-${month}`, "YYYY-MM").daysInMonth();
+  const startDate = `${year}-${month}-01`;
+  const endDate = `${year}-${month}-${daysInMonth}`;
+
+  // Query 1: Get total working days from attendance table
+  const workingDaysQuery = `
+    SELECT COUNT(DISTINCT date) AS total_working_days
+    FROM attendance
+    WHERE emp_id = ?
+      AND date BETWEEN ? AND ?
+      AND work_day = 1
   `;
 
-  db.query(query, [employee_id, month, year], (error, results) => {
-    if (error) {
-      console.error('Error fetching free leaves:', error);
-      return res.status(500).json({ error: error.message });
-    }
+  // Query 2: Get total approved leaves (all)
+  const totalLeavesQuery = `
+    SELECT COUNT(*) AS total_leaves
+    FROM leave_applications
+    WHERE employee_id = ?
+      AND status = 'Approved'
+      AND from_date BETWEEN ? AND ?
+  `;
 
-    const totalFreeLeaves = results[0].total_free_leaves || 0;
+  // Query 3: Get total free leaves (Approved + Free)
+  const freeLeavesQuery = `
+    SELECT COUNT(*) AS total_free_leaves
+    FROM leave_applications
+    WHERE employee_id = ?
+      AND status = 'Approved'
+      AND leave_mode = 'Free'
+      AND from_date BETWEEN ? AND ?
+  `;
 
-    res.status(200).json({ employee_id, monthYear, totalFreeLeaves });
+  // Query 4: Get total paid leaves (Approved + Paid)
+  const paidLeavesQuery = `
+    SELECT COUNT(*) AS total_paid_leaves
+    FROM leave_applications
+    WHERE employee_id = ?
+      AND status = 'Approved'
+      AND leave_mode = 'Paid'
+      AND from_date BETWEEN ? AND ?
+  `;
+
+  db.query(workingDaysQuery, [employee_id, startDate, endDate], (err1, result1) => {
+    if (err1) return res.status(500).json({ error: 'Error fetching working days', details: err1 });
+    const totalWorkingDays = result1[0].total_working_days || 0;
+
+    db.query(totalLeavesQuery, [employee_id, startDate, endDate], (err2, result2) => {
+      if (err2) return res.status(500).json({ error: 'Error fetching total leaves', details: err2 });
+      const totalLeaves = result2[0].total_leaves || 0;
+
+      db.query(freeLeavesQuery, [employee_id, startDate, endDate], (err3, result3) => {
+        if (err3) return res.status(500).json({ error: 'Error fetching free leaves', details: err3 });
+        const totalFreeLeaves = result3[0].total_free_leaves || 0;
+
+        db.query(paidLeavesQuery, [employee_id, startDate, endDate], (err4, result4) => {
+          if (err4) return res.status(500).json({ error: 'Error fetching paid leaves', details: err4 });
+          const totalPaidLeaves = result4[0].total_paid_leaves || 0;
+
+          // Final response
+          return res.status(200).json({
+            employee_id,
+            monthYear: `${month}-${year}`,
+            total_days_in_month: daysInMonth,
+            total_working_days: totalWorkingDays,
+            total_leaves: totalLeaves,
+            total_free_leaves: totalFreeLeaves,
+            total_paid_leaves: totalPaidLeaves
+          });
+        });
+      });
+    });
   });
 };
+
 // /api/leaves/free/2/08-2025
 
 

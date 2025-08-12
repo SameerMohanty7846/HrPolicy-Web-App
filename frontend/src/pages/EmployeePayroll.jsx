@@ -10,7 +10,15 @@ const EmployeePayroll = () => {
   const [showSalaryInput, setShowSalaryInput] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [componentValues, setComponentValues] = useState({});
-  const [freeLeaves, setFreeLeaves] = useState(0);
+  const [leaveData, setLeaveData] = useState({
+    employee_id: '',
+    monthYear: '',
+    totalDaysInMonth: 0,
+    totalWorkingDays: 0,
+    totalLeaves: 0,
+    totalFreeLeaves: 0,
+    totalPaidLeaves: 0
+  });
   const [leaveDeduction, setLeaveDeduction] = useState(0);
 
   const months = [
@@ -37,10 +45,10 @@ const EmployeePayroll = () => {
             enabled: false,
             value: '',
             type: comp.type,
-            value_type: comp.days_calculated === 1 ? 'days' : 'percentage', // Default to percentage or days
+            value_type: 'percentage',
             based_on: comp.based_on,
             amount: 0,
-            days: 0 // For days_calculated components
+            days: 0
           };
         });
         setComponentValues(initialValues);
@@ -51,21 +59,36 @@ const EmployeePayroll = () => {
   useEffect(() => {
     if (selectedEmployee && selectedMonth && selectedYear) {
       setShowSalaryInput(true);
-      // Fetch free leaves for selected employee and month-year
       const monthNumber = (months.indexOf(selectedMonth) + 1).toString().padStart(2, '0');
       const monthYear = `${monthNumber}-${selectedYear}`;
       
       axios.get(`http://localhost:2000/api/leaves/free/${selectedEmployee}/${monthYear}`)
         .then(response => {
-          const leaves = parseInt(response.data.totalFreeLeaves) || 0;
-          setFreeLeaves(leaves);
-          // Calculate leave deduction (1 day salary deduction per leave)
+          const data = response.data;
+          setLeaveData({
+            employee_id: data.employee_id,
+            monthYear: data.monthYear,
+            totalDaysInMonth: parseInt(data.total_days_in_month) || 0,
+            totalWorkingDays: parseInt(data.total_working_days) || 0,
+            totalLeaves: parseInt(data.total_leaves) || 0,
+            totalFreeLeaves: parseInt(data.total_free_leaves) || 0,
+            totalPaidLeaves: parseInt(data.total_paid_leaves) || 0
+          });
+          
           const dailySalary = basicSalary / 30;
-          setLeaveDeduction(dailySalary * leaves);
+          setLeaveDeduction(dailySalary * (parseInt(data.total_free_leaves) || 0));
         })
         .catch(error => {
-          console.error('Error fetching free leaves:', error);
-          setFreeLeaves(0);
+          console.error('Error fetching leave data:', error);
+          setLeaveData({
+            employee_id: '',
+            monthYear: '',
+            totalDaysInMonth: 0,
+            totalWorkingDays: 0,
+            totalLeaves: 0,
+            totalFreeLeaves: 0,
+            totalPaidLeaves: 0
+          });
           setLeaveDeduction(0);
         });
     } else {
@@ -73,54 +96,14 @@ const EmployeePayroll = () => {
     }
   }, [selectedEmployee, selectedMonth, selectedYear, basicSalary]);
 
-  useEffect(() => {
-    // Recalculate amounts when basic salary changes or value_type changes
-    const updatedValues = {...componentValues};
-    let needsUpdate = false;
-
-    Object.keys(updatedValues).forEach(id => {
-      const comp = updatedValues[id];
-      if (comp.enabled) {
-        const component = salaryComponents.find(c => c.id === parseInt(id));
-        if (component) {
-          let newAmount = 0;
-          
-          if (component.days_calculated === 1) {
-            // Calculate based on days
-            const dailySalary = basicSalary / 30;
-            newAmount = dailySalary * (comp.days || 0);
-          } else {
-            // Calculate based on value type (percentage/flat)
-            newAmount = calculateAmount(id, comp.value, comp.value_type);
-          }
-          
-          if (comp.amount !== newAmount) {
-            updatedValues[id].amount = newAmount;
-            needsUpdate = true;
-          }
-        }
-      }
-    });
-
-    if (needsUpdate) {
-      setComponentValues(updatedValues);
-    }
-  }, [basicSalary, componentValues]);
-
   const handleComponentToggle = (componentId) => {
-    const component = salaryComponents.find(c => c.id === parseInt(componentId));
-    
     setComponentValues(prev => ({
       ...prev,
       [componentId]: {
         ...prev[componentId],
         enabled: !prev[componentId].enabled,
-        value: prev[componentId].enabled ? '' : prev[componentId].value,
-        days: prev[componentId].enabled ? 0 : prev[componentId].days,
-        amount: prev[componentId].enabled ? 0 : 
-          component.days_calculated === 1 ? 
-            (basicSalary / 30) * (prev[componentId].days || 0) : 
-            calculateAmount(componentId, prev[componentId].value, prev[componentId].value_type)
+        value: prev[componentId].enabled ? '' : '0',
+        amount: 0
       }
     }));
   };
@@ -128,21 +111,19 @@ const EmployeePayroll = () => {
   const calculateAmount = (componentId, value, valueType) => {
     if (!value) return 0;
     
-    const component = salaryComponents.find(c => c.id === parseInt(componentId));
-    if (!component) return 0;
-
+    const numericValue = parseFloat(value) || 0;
+    
     if (valueType === 'flat') {
-      return parseFloat(value) || 0;
+      return numericValue;
     } else if (valueType === 'percentage') {
-      const percentage = parseFloat(value) || 0;
-      return (basicSalary * percentage) / 100;
+      return (basicSalary * numericValue) / 100;
     }
     return 0;
   };
 
   const handleValueChange = (componentId, value) => {
-    const valueType = componentValues[componentId]?.value_type || 'percentage';
-    const amount = calculateAmount(componentId, value, valueType);
+    const component = componentValues[componentId];
+    const amount = calculateAmount(componentId, value, component.value_type);
     
     setComponentValues(prev => ({
       ...prev,
@@ -154,23 +135,9 @@ const EmployeePayroll = () => {
     }));
   };
 
-  const handleDaysChange = (componentId, days) => {
-    const dailySalary = basicSalary / 30;
-    const amount = dailySalary * (parseInt(days) || 0);
-    
-    setComponentValues(prev => ({
-      ...prev,
-      [componentId]: {
-        ...prev[componentId],
-        days: parseInt(days) || 0,
-        amount: amount
-      }
-    }));
-  };
-
   const handleValueTypeChange = (componentId, valueType) => {
-    const currentValue = componentValues[componentId]?.value || '';
-    const amount = calculateAmount(componentId, currentValue, valueType);
+    const component = componentValues[componentId];
+    const amount = calculateAmount(componentId, component.value, valueType);
     
     setComponentValues(prev => ({
       ...prev,
@@ -182,7 +149,6 @@ const EmployeePayroll = () => {
     }));
   };
 
-  // Calculate salary summary - now includes leave deduction
   const calculateSalarySummary = () => {
     let totalEarnings = 0;
     let totalDeductions = 0;
@@ -197,7 +163,6 @@ const EmployeePayroll = () => {
       }
     });
 
-    // Add leave deduction to total deductions
     totalDeductions += leaveDeduction;
 
     const grossSalary = basicSalary + totalEarnings;
@@ -209,7 +174,7 @@ const EmployeePayroll = () => {
       totalDeductions,
       grossSalary,
       netSalary,
-      freeLeaves,
+      ...leaveData,
       leaveDeduction
     };
   };
@@ -229,7 +194,11 @@ const EmployeePayroll = () => {
       total_deductions: Number(salarySummary.totalDeductions.toFixed(2)),
       gross_salary: Number((basicSalary + salarySummary.totalEarnings).toFixed(2)),
       leave_deductions: Number(salarySummary.leaveDeduction.toFixed(2)),
-      leave_days: Number(freeLeaves),
+      total_days_in_month: Number(salarySummary.totalDaysInMonth),
+      total_working_days: Number(salarySummary.totalWorkingDays),
+      total_leaves: Number(salarySummary.totalLeaves),
+      total_free_leaves: Number(salarySummary.totalFreeLeaves),
+      total_paid_leaves: Number(salarySummary.totalPaidLeaves),
       net_salary: Number(salarySummary.netSalary.toFixed(2))
     };
 
@@ -317,6 +286,47 @@ const EmployeePayroll = () => {
                 </div>
               </div>
 
+              {/* Leave Information Card */}
+              <div className="card mb-3">
+                <div className="card-header bg-light py-2">
+                  <h6 className="small fw-bold mb-0">Leave Information</h6>
+                </div>
+                <div className="card-body p-3">
+                  <div className="row">
+                    <div className="col-md-4">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Total Days in Month:</span>
+                        <span className="small fw-bold">{leaveData.totalDaysInMonth}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Working Days:</span>
+                        <span className="small fw-bold">{leaveData.totalWorkingDays}</span>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Total Leaves:</span>
+                        <span className="small fw-bold">{leaveData.totalLeaves}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Paid Leaves:</span>
+                        <span className="small fw-bold text-success">{leaveData.totalPaidLeaves}</span>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Free Leaves:</span>
+                        <span className="small fw-bold text-danger">{leaveData.totalFreeLeaves}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="small">Leave Deduction:</span>
+                        <span className="small fw-bold text-danger">₹{leaveDeduction.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Salary Components Table */}
               <div className="table-responsive mb-4">
                 <table className="table table-sm table-bordered">
@@ -333,7 +343,6 @@ const EmployeePayroll = () => {
                   </thead>
                   <tbody>
                     {salaryComponents.map(component => {
-                      const isDaysCalculated = component.days_calculated === 1;
                       const componentValue = componentValues[component.id];
                       
                       return (
@@ -353,33 +362,21 @@ const EmployeePayroll = () => {
                           </td>
                           <td>
                             {componentValue?.enabled ? (
-                              isDaysCalculated ? (
-                                <span className="small">Days</span>
-                              ) : (
-                                <select
-                                  className="form-select form-select-sm"
-                                  value={componentValue?.value_type || 'percentage'}
-                                  onChange={(e) => handleValueTypeChange(component.id, e.target.value)}
-                                >
-                                  <option value="percentage">Percentage</option>
-                                  <option value="flat">Flat</option>
-                                </select>
-                              )
+                              <select
+                                className="form-select form-select-sm"
+                                value={componentValue?.value_type || 'percentage'}
+                                onChange={(e) => handleValueTypeChange(component.id, e.target.value)}
+                              >
+                                <option value="percentage">Percentage</option>
+                                <option value="flat">Flat</option>
+                              </select>
                             ) : (
                               <span className="text-muted">-</span>
                             )}
                           </td>
                           <td>
                             {componentValue?.enabled ? (
-                              isDaysCalculated ? (
-                                <input
-                                  type="number"
-                                  className="form-control form-control-sm"
-                                  value={componentValue?.days || ''}
-                                  onChange={(e) => handleDaysChange(component.id, e.target.value)}
-                                  placeholder="Enter days"
-                                />
-                              ) : componentValue?.value_type === 'flat' ? (
+                              componentValue?.value_type === 'flat' ? (
                                 <input
                                   type="number"
                                   className="form-control form-control-sm"
@@ -446,7 +443,7 @@ const EmployeePayroll = () => {
                       </div>
                       <div className="d-flex justify-content-between mb-2">
                         <span className="small">Leave Deductions:</span>
-                        <span className="small fw-bold text-danger">₹{salarySummary.leaveDeduction.toFixed(2)} ({salarySummary.freeLeaves} days)</span>
+                        <span className="small fw-bold text-danger">₹{salarySummary.leaveDeduction.toFixed(2)}</span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="small">Net Salary:</span>
