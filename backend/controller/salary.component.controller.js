@@ -1,5 +1,4 @@
 import db from '../config/db.js';
-import moment from 'moment'; // Or use JS Date API if you prefer
 
 // 1. Create Salary Component
 export const createSalaryComponent = (req, res) => {
@@ -114,216 +113,226 @@ export const getComponentsByValueType = (req, res) => {
 
 
 //7.Get Total free leaves for that month year
-
 export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
-  const { employee_id, monthYear } = req.params; // Format MM-YYYY
+  const { employee_id, monthYear } = req.params; // monthYear format should be MM-YYYY
 
-  let [month, year] = monthYear.split('-');
-  if (month.length === 1) month = '0' + month;
+  // Split MM-YYYY
+  const [month, year] = monthYear.split('-');
 
-  const daysInMonth = moment(`${year}-${month}`, "YYYY-MM").daysInMonth();
-  const startDate = `${year}-${month}-01`;
-  const endDate = `${year}-${month}-${daysInMonth}`;
-
-  // Query 1: Get total working days from attendance table
-  const workingDaysQuery = `
-    SELECT COUNT(DISTINCT date) AS total_working_days
-    FROM attendance
-    WHERE emp_id = ?
-      AND date BETWEEN ? AND ?
-      AND work_day = 1
+  const query = `
+    SELECT 
+      SUM(la.no_of_days) AS total_free_leaves
+    FROM 
+      leave_applications la
+    JOIN 
+      hr_leave_policy hp ON la.leave_type = hp.leave_type
+    WHERE 
+      la.employee_id = ? 
+      AND la.status = 'Approved'
+      AND hp.mode = 'Free'
+      AND MONTH(la.from_date) = ? 
+      AND YEAR(la.from_date) = ?
   `;
 
-  // Query 2: Get total approved leaves (all)
-  const totalLeavesQuery = `
-    SELECT COUNT(*) AS total_leaves
-    FROM leave_applications
-    WHERE employee_id = ?
-      AND status = 'Approved'
-      AND from_date BETWEEN ? AND ?
-  `;
+  db.query(query, [employee_id, month, year], (error, results) => {
+    if (error) {
+      console.error('Error fetching free leaves:', error);
+      return res.status(500).json({ error: error.message });
+    }
 
-  // Query 3: Get total free leaves (Approved + Free)
-  const freeLeavesQuery = `
-    SELECT COUNT(*) AS total_free_leaves
-    FROM leave_applications
-    WHERE employee_id = ?
-      AND status = 'Approved'
-      AND leave_mode = 'Free'
-      AND from_date BETWEEN ? AND ?
-  `;
+    const totalFreeLeaves = results[0].total_free_leaves || 0;
 
-  // Query 4: Get total paid leaves (Approved + Paid)
-  const paidLeavesQuery = `
-    SELECT COUNT(*) AS total_paid_leaves
-    FROM leave_applications
-    WHERE employee_id = ?
-      AND status = 'Approved'
-      AND leave_mode = 'Paid'
-      AND from_date BETWEEN ? AND ?
-  `;
-
-  db.query(workingDaysQuery, [employee_id, startDate, endDate], (err1, result1) => {
-    if (err1) return res.status(500).json({ error: 'Error fetching working days', details: err1 });
-    const totalWorkingDays = result1[0].total_working_days || 0;
-
-    db.query(totalLeavesQuery, [employee_id, startDate, endDate], (err2, result2) => {
-      if (err2) return res.status(500).json({ error: 'Error fetching total leaves', details: err2 });
-      const totalLeaves = result2[0].total_leaves || 0;
-
-      db.query(freeLeavesQuery, [employee_id, startDate, endDate], (err3, result3) => {
-        if (err3) return res.status(500).json({ error: 'Error fetching free leaves', details: err3 });
-        const totalFreeLeaves = result3[0].total_free_leaves || 0;
-
-        db.query(paidLeavesQuery, [employee_id, startDate, endDate], (err4, result4) => {
-          if (err4) return res.status(500).json({ error: 'Error fetching paid leaves', details: err4 });
-          const totalPaidLeaves = result4[0].total_paid_leaves || 0;
-
-          // Final response
-          return res.status(200).json({
-            employee_id,
-            monthYear: `${month}-${year}`,
-            total_days_in_month: daysInMonth,
-            total_working_days: totalWorkingDays,
-            total_leaves: totalLeaves,
-            total_free_leaves: totalFreeLeaves,
-            total_paid_leaves: totalPaidLeaves
-          });
-        });
-      });
-    });
+    res.status(200).json({ employee_id, monthYear, totalFreeLeaves });
   });
 };
-
 // /api/leaves/free/2/08-2025
 
 
 //save payroll
 // Insert Payroll Record
+
 export const createPayroll = async (req, res) => {
-  try {
-    // 1. Destructure and validate input
-    const {
-      employee_id,
-      month,
-      year,
-      basic_salary,
-      total_earnings = 0,
-      total_deductions = 0,
-      gross_salary = 0,
-      leave_deductions = 0,
-      leave_days = 0,
-      net_salary = 0
-    } = req.body;
+    let connection; // Declare the connection variable outside the try block
 
-    // Validate required fields
-    const requiredFields = { employee_id, month, year, basic_salary };
-    for (const [field, value] of Object.entries(requiredFields)) {
-      if (value === undefined || value === null || value === '') {
-        return res.status(400).json({
-          success: false,
-          message: `Missing required field: ${field}`
+    try {
+        // 1. Get a dedicated connection from the promise-based pool
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        // 2. Destructure and validate input
+        const {
+            employee_id,
+            month,
+            year,
+            basic_salary,
+            total_earnings = 0,
+            total_deductions = 0,
+            gross_salary = 0,
+            leave_deductions = 0,
+            total_days_in_month = 0,
+            total_working_days = 0,
+            total_leaves = 0,
+            total_free_leaves = 0,
+            total_paid_leaves = 0,
+            net_salary = 0,
+            components = [] // Array of dynamic components
+        } = req.body;
+
+        // Validate required fields
+        const requiredFields = { employee_id, month, year, basic_salary, net_salary };
+        for (const [field, value] of Object.entries(requiredFields)) {
+            if (value === undefined || value === null || value === '') {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: `Missing required field: ${field}`
+                });
+            }
+        }
+
+        // Convert and validate numeric values
+        const numericValues = {
+            month: Number(month),
+            year: Number(year),
+            basic_salary: parseFloat(basic_salary),
+            total_earnings: parseFloat(total_earnings) || 0,
+            total_deductions: parseFloat(total_deductions) || 0,
+            gross_salary: parseFloat(gross_salary) || 0,
+            leave_deductions: parseFloat(leave_deductions) || 0,
+            total_days_in_month: parseInt(total_days_in_month) || 0,
+            total_working_days: parseInt(total_working_days) || 0,
+            total_leaves: parseInt(total_leaves) || 0,
+            total_free_leaves: parseInt(total_free_leaves) || 0,
+            total_paid_leaves: parseInt(total_paid_leaves) || 0,
+            net_salary: parseFloat(net_salary)
+        };
+
+        // Validate month range
+        if (numericValues.month < 1 || numericValues.month > 12) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                message: "Month must be between 1-12"
+            });
+        }
+
+        // 3. Check for existing payroll using the 'connection' object
+        const checkSql = `SELECT id FROM monthly_salary_reports 
+                           WHERE employee_id = ? AND month = ? AND year = ?`;
+        const [existing] = await connection.query(checkSql, [
+            employee_id,
+            numericValues.month,
+            numericValues.year
+        ]);
+
+        if (existing.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                message: "Payroll record already exists for this employee/month/year",
+                existing_id: existing[0].id
+            });
+        }
+
+        // 4. Insert main payroll record using the 'connection' object
+        const insertSql = `
+          INSERT INTO monthly_salary_reports (
+            employee_id, month, year, basic_salary,
+            total_days_in_month, total_working_days, total_leaves,
+            total_free_leaves, total_paid_leaves, leave_deductions,
+            total_earnings, total_deductions, gross_salary, net_salary
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const [result] = await connection.query(insertSql, [
+            employee_id,
+            numericValues.month,
+            numericValues.year,
+            numericValues.basic_salary,
+            numericValues.total_days_in_month,
+            numericValues.total_working_days,
+            numericValues.total_leaves,
+            numericValues.total_free_leaves,
+            numericValues.total_paid_leaves,
+            numericValues.leave_deductions,
+            numericValues.total_earnings,
+            numericValues.total_deductions,
+            numericValues.gross_salary,
+            numericValues.net_salary
+        ]);
+
+        const payrollId = result.insertId;
+
+        // 5. Insert dynamic components if they exist
+        if (components && components.length > 0) {
+            const componentInsertSql = `
+              INSERT INTO payroll_components (
+                payroll_id, component_name, component_type,
+                calculation_type, value, amount, based_on
+              ) VALUES ?
+            `;
+
+            const componentValues = components.map(comp => [
+                payrollId,
+                comp.name,
+                comp.type,
+                comp.value_type,
+                parseFloat(comp.value) || 0,
+                parseFloat(comp.amount) || 0,
+                comp.based_on || null
+            ]);
+            await connection.query(componentInsertSql, [componentValues]);
+        }
+
+        // 6. Commit transaction
+        await connection.commit();
+
+        // 7. Return success response
+        return res.status(201).json({
+            success: true,
+            payroll_id: payrollId,
+            message: "Payroll record created successfully",
+            data: {
+                ...numericValues,
+                employee_id,
+                components: components || []
+            }
         });
-      }
+
+    } catch (err) {
+        // Rollback on any error, making sure 'connection' is defined
+        if (connection) {
+            await connection.rollback();
+        }
+        console.error("Payroll creation error:", err);
+
+        // Handle specific MySQL errors
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                success: false,
+                message: "Payroll record already exists for this employee/month/year"
+            });
+        }
+        if (err.code === 'ER_NO_REFERENCED_ROW') {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid employee_id: Employee does not exist"
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to create payroll record",
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    } finally {
+        // 8. Always release the connection back to the pool
+        if (connection) {
+            connection.release();
+        }
     }
-
-    // Convert and validate numeric values
-    const numericValues = {
-      month: Number(month),
-      year: Number(year),
-      basic_salary: parseFloat(basic_salary),
-      total_earnings: parseFloat(total_earnings) || 0,
-      total_deductions: parseFloat(total_deductions) || 0,
-      gross_salary: parseFloat(gross_salary) || 0,
-      leave_deductions: parseFloat(leave_deductions) || 0,
-      leave_days: parseInt(leave_days) || 0,
-      net_salary: parseFloat(net_salary) || 0
-    };
-
-    // Validate month range
-    if (numericValues.month < 1 || numericValues.month > 12) {
-      return res.status(400).json({
-        success: false,
-        message: "Month must be between 1-12"
-      });
-    }
-
-    // 2. Explicit duplicate check (even though UNIQUE constraint exists)
-    const checkSql = `SELECT payroll_id FROM payroll_master 
-                     WHERE employee_id = ? AND month = ? AND year = ?`;
-    const [existing] = await db.promise().query(checkSql, [
-      employee_id,
-      numericValues.month,
-      numericValues.year
-    ]);
-
-    if (existing.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Payroll record already exists for this employee/month/year",
-        existing_id: existing[0].payroll_id
-      });
-    }
-
-    // 3. Insert new record
-    const insertSql = `
-      INSERT INTO payroll_master (
-        employee_id, month, year, basic_salary,
-        total_earnings, total_deductions, gross_salary,
-        leave_deductions, leave_days, net_salary
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    const [result] = await db.promise().query(insertSql, [
-      employee_id,
-      numericValues.month,
-      numericValues.year,
-      numericValues.basic_salary,
-      numericValues.total_earnings,
-      numericValues.total_deductions,
-      numericValues.gross_salary,
-      numericValues.leave_deductions,
-      numericValues.leave_days,
-      numericValues.net_salary
-    ]);
-
-    // 4. Return success response
-    return res.status(201).json({
-      success: true,
-      payroll_id: result.insertId,
-      message: "Payroll record created successfully",
-      data: {
-        ...numericValues,
-        employee_id
-      }
-    });
-
-  } catch (err) {
-    console.error("Payroll creation error:", err);
-    
-    // Handle duplicate entry error from MySQL (secondary check)
-    if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({
-        success: false,
-        message: "Payroll record already exists for this employee/month/year"
-      });
-    }
-
-    // Handle foreign key constraint violation
-    if (err.code === 'ER_NO_REFERENCED_ROW') {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid employee_id: Employee does not exist"
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to create payroll record",
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-  }
 };
+
 
 // Get payroll records for ALL employees for a specific month/year
 export const getAllPayrolls = async (req, res) => {
