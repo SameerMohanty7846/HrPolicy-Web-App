@@ -112,201 +112,184 @@ export const getComponentsByValueType = (req, res) => {
 };
 
 
-//7.Get Total free leaves for that month year
 export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
-  const { employee_id, monthYear } = req.params; // monthYear format should be MM-YYYY
+  const { employee_id, monthYear } = req.params; // format: MM-YYYY
+  const [month, year] = monthYear.split('-').map(num => parseInt(num, 10));
 
-  // Split MM-YYYY
-  const [month, year] = monthYear.split('-');
+  // Calculate total days in month
+  const totalDaysInMonth = new Date(year, month, 0).getDate();
 
   const query = `
     SELECT 
-      SUM(la.no_of_days) AS total_free_leaves
-    FROM 
-      leave_applications la
-    JOIN 
-      hr_leave_policy hp ON la.leave_type = hp.leave_type
-    WHERE 
-      la.employee_id = ? 
-      AND la.status = 'Approved'
-      AND hp.mode = 'Free'
-      AND MONTH(la.from_date) = ? 
-      AND YEAR(la.from_date) = ?
+      (SELECT COUNT(*) 
+       FROM attendance 
+       WHERE emp_id = ? 
+         AND MONTH(date) = ? 
+         AND YEAR(date) = ?) AS total_working_days,
+
+      (SELECT COUNT(*) 
+       FROM attendance 
+       WHERE emp_id = ? 
+         AND MONTH(date) = ? 
+         AND YEAR(date) = ? 
+         AND work_day = 1) AS present_days,
+
+      (SELECT IFNULL(SUM(no_of_days), 0) 
+       FROM leave_applications 
+       WHERE employee_id = ? 
+         AND MONTH(from_date) = ? 
+         AND YEAR(from_date) = ? 
+         AND status = 'Approved'
+         AND leave_mode = 'Paid') AS total_paid_leaves,
+
+      (SELECT IFNULL(SUM(no_of_days), 0) 
+       FROM leave_applications 
+       WHERE employee_id = ? 
+         AND MONTH(from_date) = ? 
+         AND YEAR(from_date) = ? 
+         AND status = 'Approved'
+         AND leave_mode = 'Free') AS total_free_leaves
   `;
 
-  db.query(query, [employee_id, month, year], (error, results) => {
-    if (error) {
-      console.error('Error fetching free leaves:', error);
-      return res.status(500).json({ error: error.message });
+  db.query(
+    query,
+    [
+      employee_id, month, year, // total_working_days
+      employee_id, month, year, // present_days
+      employee_id, month, year, // total_paid_leaves
+      employee_id, month, year  // total_free_leaves
+    ],
+    (error, results) => {
+      if (error) {
+        console.error("Error fetching attendance info:", error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      const row = results[0] || {};
+
+      // Convert all numeric fields to actual numbers
+      const totalWorkingDays = Number(row.total_working_days) || 0;
+      const presentDays = Number(row.present_days) || 0;
+      const totalPaidLeaves = Number(row.total_paid_leaves) || 0;
+      const totalFreeLeaves = Number(row.total_free_leaves) || 0;
+
+      const absentDays = totalWorkingDays - presentDays;
+      const totalLeaves = totalPaidLeaves + totalFreeLeaves;
+
+      res.status(200).json({
+        employee_id,
+        monthYear,
+        total_days_in_month: totalDaysInMonth,
+        total_working_days: totalWorkingDays,
+        present_days: presentDays,
+        absent_days: absentDays,
+        total_paid_leaves: totalPaidLeaves,
+        total_free_leaves: totalFreeLeaves,
+        total_leaves: totalLeaves
+      });
     }
-
-    const totalFreeLeaves = results[0].total_free_leaves || 0;
-
-    res.status(200).json({ employee_id, monthYear, totalFreeLeaves });
-  });
+  );
 };
+
+
+
 // /api/leaves/free/2/08-2025
 
 
 //save payroll
 // Insert Payroll Record
 
+
 export const createPayroll = async (req, res) => {
-    let connection; // Declare the connection variable outside the try block
-
     try {
-        // 1. Get a dedicated connection from the promise-based pool
-        connection = await db.getConnection();
-        await connection.beginTransaction();
-
-        // 2. Destructure and validate input
         const {
             employee_id,
             month,
             year,
             basic_salary,
+            total_days_in_month = null,
+            total_working_days = null,
+            total_leaves = null,
+            total_free_leaves = null,
+            total_paid_leaves = null,
+            leave_deductions = 0,
             total_earnings = 0,
             total_deductions = 0,
             gross_salary = 0,
-            leave_deductions = 0,
-            total_days_in_month = 0,
-            total_working_days = 0,
-            total_leaves = 0,
-            total_free_leaves = 0,
-            total_paid_leaves = 0,
-            net_salary = 0,
-            components = [] // Array of dynamic components
+            net_salary
         } = req.body;
 
-        // Validate required fields
-        const requiredFields = { employee_id, month, year, basic_salary, net_salary };
-        for (const [field, value] of Object.entries(requiredFields)) {
-            if (value === undefined || value === null || value === '') {
-                await connection.rollback();
-                return res.status(400).json({
-                    success: false,
-                    message: `Missing required field: ${field}`
-                });
-            }
-        }
-
-        // Convert and validate numeric values
-        const numericValues = {
-            month: Number(month),
-            year: Number(year),
-            basic_salary: parseFloat(basic_salary),
-            total_earnings: parseFloat(total_earnings) || 0,
-            total_deductions: parseFloat(total_deductions) || 0,
-            gross_salary: parseFloat(gross_salary) || 0,
-            leave_deductions: parseFloat(leave_deductions) || 0,
-            total_days_in_month: parseInt(total_days_in_month) || 0,
-            total_working_days: parseInt(total_working_days) || 0,
-            total_leaves: parseInt(total_leaves) || 0,
-            total_free_leaves: parseInt(total_free_leaves) || 0,
-            total_paid_leaves: parseInt(total_paid_leaves) || 0,
-            net_salary: parseFloat(net_salary)
-        };
-
-        // Validate month range
-        if (numericValues.month < 1 || numericValues.month > 12) {
-            await connection.rollback();
+        // Required fields check
+        if (!employee_id || !month || !year || !basic_salary || net_salary === undefined) {
             return res.status(400).json({
                 success: false,
-                message: "Month must be between 1-12"
+                message: "Missing required fields"
             });
         }
 
-        // 3. Check for existing payroll using the 'connection' object
-        const checkSql = `SELECT id FROM monthly_salary_reports 
-                           WHERE employee_id = ? AND month = ? AND year = ?`;
-        const [existing] = await connection.query(checkSql, [
-            employee_id,
-            numericValues.month,
-            numericValues.year
-        ]);
+        // Month validation
+        if (month < 1 || month > 12) {
+            return res.status(400).json({
+                success: false,
+                message: "Month must be between 1 and 12"
+            });
+        }
 
+        const connection = db.promise();
+        await connection.query("START TRANSACTION");
+
+        // Duplicate check
+        const [existing] = await connection.query(
+            `SELECT id FROM monthly_salary_reports WHERE employee_id = ? AND month = ? AND year = ?`,
+            [employee_id, month, year]
+        );
         if (existing.length > 0) {
-            await connection.rollback();
+            await connection.query("ROLLBACK");
             return res.status(409).json({
                 success: false,
-                message: "Payroll record already exists for this employee/month/year",
+                message: "Payroll already exists for this employee/month/year",
                 existing_id: existing[0].id
             });
         }
 
-        // 4. Insert main payroll record using the 'connection' object
+        // Insert into monthly_salary_reports
         const insertSql = `
-          INSERT INTO monthly_salary_reports (
-            employee_id, month, year, basic_salary,
-            total_days_in_month, total_working_days, total_leaves,
-            total_free_leaves, total_paid_leaves, leave_deductions,
-            total_earnings, total_deductions, gross_salary, net_salary
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO monthly_salary_reports (
+                employee_id, month, year, basic_salary,
+                total_days_in_month, total_working_days, total_leaves,
+                total_free_leaves, total_paid_leaves, leave_deductions,
+                total_earnings, total_deductions, gross_salary, net_salary
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-
         const [result] = await connection.query(insertSql, [
             employee_id,
-            numericValues.month,
-            numericValues.year,
-            numericValues.basic_salary,
-            numericValues.total_days_in_month,
-            numericValues.total_working_days,
-            numericValues.total_leaves,
-            numericValues.total_free_leaves,
-            numericValues.total_paid_leaves,
-            numericValues.leave_deductions,
-            numericValues.total_earnings,
-            numericValues.total_deductions,
-            numericValues.gross_salary,
-            numericValues.net_salary
+            month,
+            year,
+            basic_salary,
+            total_days_in_month,
+            total_working_days,
+            total_leaves,
+            total_free_leaves,
+            total_paid_leaves,
+            leave_deductions,
+            total_earnings,
+            total_deductions,
+            gross_salary,
+            net_salary
         ]);
 
-        const payrollId = result.insertId;
+        await connection.query("COMMIT");
 
-        // 5. Insert dynamic components if they exist
-        if (components && components.length > 0) {
-            const componentInsertSql = `
-              INSERT INTO payroll_components (
-                payroll_id, component_name, component_type,
-                calculation_type, value, amount, based_on
-              ) VALUES ?
-            `;
-
-            const componentValues = components.map(comp => [
-                payrollId,
-                comp.name,
-                comp.type,
-                comp.value_type,
-                parseFloat(comp.value) || 0,
-                parseFloat(comp.amount) || 0,
-                comp.based_on || null
-            ]);
-            await connection.query(componentInsertSql, [componentValues]);
-        }
-
-        // 6. Commit transaction
-        await connection.commit();
-
-        // 7. Return success response
         return res.status(201).json({
             success: true,
-            payroll_id: payrollId,
-            message: "Payroll record created successfully",
-            data: {
-                ...numericValues,
-                employee_id,
-                components: components || []
-            }
+            payroll_id: result.insertId,
+            message: "Payroll record created successfully"
         });
 
     } catch (err) {
-        // Rollback on any error, making sure 'connection' is defined
-        if (connection) {
-            await connection.rollback();
-        }
-        console.error("Payroll creation error:", err);
+        console.error("Error creating payroll:", err);
+        await db.promise().query("ROLLBACK");
 
-        // Handle specific MySQL errors
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({
                 success: false,
@@ -322,16 +305,12 @@ export const createPayroll = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Failed to create payroll record",
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            message: "Failed to create payroll record"
         });
-    } finally {
-        // 8. Always release the connection back to the pool
-        if (connection) {
-            connection.release();
-        }
     }
 };
+
+
 
 
 // Get payroll records for ALL employees for a specific month/year
