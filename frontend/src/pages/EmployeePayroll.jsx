@@ -4,29 +4,10 @@ import axios from 'axios';
 const EmployeePayroll = () => {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [basicSalary, setBasicSalary] = useState(0);
   const [showSalaryInput, setShowSalaryInput] = useState(false);
   const [salaryComponents, setSalaryComponents] = useState([]);
   const [componentValues, setComponentValues] = useState({});
-  const [leaveData, setLeaveData] = useState({
-    employee_id: '',
-    monthYear: '',
-    totalDaysInMonth: 0,
-    totalWorkingDays: 0,
-    totalLeaves: 0,
-    totalFreeLeaves: 0,
-    totalPaidLeaves: 0
-  });
-  const [leaveDeduction, setLeaveDeduction] = useState(0);
-
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const years = ['2023', '2024', '2025', '2026'];
+  const [basicSalary, setBasicSalary] = useState(0);
 
   useEffect(() => {
     // Fetch employees
@@ -35,21 +16,26 @@ const EmployeePayroll = () => {
       .catch(error => console.error('Error fetching employees:', error));
 
     // Fetch salary components
-    axios.get('http://localhost:2000/api/salary-components/list-without-first')
+    axios.get('http://localhost:2000/api/salary-components/list')
       .then(response => {
         setSalaryComponents(response.data);
         // Initialize component values
         const initialValues = {};
         response.data.forEach(comp => {
           initialValues[comp.id] = {
-            enabled: false,
-            value: '',
+            enabled: comp.name.toLowerCase() === 'basic salary', // Enable Basic Salary by default
+            value: comp.default_value || '0',
             type: comp.type,
-            value_type: 'percentage',
+            value_type: comp.value_type || 'flat', // Basic Salary should be flat
             based_on: comp.based_on,
-            amount: 0,
+            amount: comp.default_value ? parseFloat(comp.default_value) : 0,
             days: 0
           };
+          
+          // Set basic salary if this is the Basic Salary component
+          if (comp.name.toLowerCase() === 'basic salary') {
+            setBasicSalary(comp.default_value ? parseFloat(comp.default_value) : 0);
+          }
         });
         setComponentValues(initialValues);
       })
@@ -57,44 +43,12 @@ const EmployeePayroll = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedEmployee && selectedMonth && selectedYear) {
+    if (selectedEmployee) {
       setShowSalaryInput(true);
-      const monthNumber = (months.indexOf(selectedMonth) + 1).toString().padStart(2, '0');
-      const monthYear = `${monthNumber}-${selectedYear}`;
-      
-      axios.get(`http://localhost:2000/api/leaves/free/${selectedEmployee}/${monthYear}`)
-        .then(response => {
-          const data = response.data;
-          setLeaveData({
-            employee_id: data.employee_id,
-            monthYear: data.monthYear,
-            totalDaysInMonth: parseInt(data.total_days_in_month) || 0,
-            totalWorkingDays: parseInt(data.total_working_days) || 0,
-            totalLeaves: parseInt(data.total_leaves) || 0,
-            totalFreeLeaves: parseInt(data.total_free_leaves) || 0,
-            totalPaidLeaves: parseInt(data.total_paid_leaves) || 0
-          });
-          
-          const dailySalary = basicSalary / 30;
-          setLeaveDeduction(dailySalary * (parseInt(data.total_free_leaves) || 0));
-        })
-        .catch(error => {
-          console.error('Error fetching leave data:', error);
-          setLeaveData({
-            employee_id: '',
-            monthYear: '',
-            totalDaysInMonth: 0,
-            totalWorkingDays: 0,
-            totalLeaves: 0,
-            totalFreeLeaves: 0,
-            totalPaidLeaves: 0
-          });
-          setLeaveDeduction(0);
-        });
     } else {
       setShowSalaryInput(false);
     }
-  }, [selectedEmployee, selectedMonth, selectedYear, basicSalary]);
+  }, [selectedEmployee]);
 
   const handleComponentToggle = (componentId) => {
     setComponentValues(prev => ({
@@ -108,12 +62,16 @@ const EmployeePayroll = () => {
     }));
   };
 
-  const calculateAmount = (componentId, value, valueType) => {
+  const calculateAmount = (componentId, value, valueType, componentName) => {
     if (!value) return 0;
     
     const numericValue = parseFloat(value) || 0;
     
     if (valueType === 'flat') {
+      // If this is Basic Salary component, update the basicSalary state
+      if (componentName.toLowerCase() === 'basic salary') {
+        setBasicSalary(numericValue);
+      }
       return numericValue;
     } else if (valueType === 'percentage') {
       return (basicSalary * numericValue) / 100;
@@ -121,9 +79,9 @@ const EmployeePayroll = () => {
     return 0;
   };
 
-  const handleValueChange = (componentId, value) => {
+  const handleValueChange = (componentId, value, componentName) => {
     const component = componentValues[componentId];
-    const amount = calculateAmount(componentId, value, component.value_type);
+    const amount = calculateAmount(componentId, value, component.value_type, componentName);
     
     setComponentValues(prev => ({
       ...prev,
@@ -135,9 +93,9 @@ const EmployeePayroll = () => {
     }));
   };
 
-  const handleValueTypeChange = (componentId, valueType) => {
+  const handleValueTypeChange = (componentId, valueType, componentName) => {
     const component = componentValues[componentId];
-    const amount = calculateAmount(componentId, component.value, valueType);
+    const amount = calculateAmount(componentId, component.value, valueType, componentName);
     
     setComponentValues(prev => ({
       ...prev,
@@ -153,7 +111,7 @@ const EmployeePayroll = () => {
     let totalEarnings = 0;
     let totalDeductions = 0;
 
-    Object.values(componentValues).forEach(comp => {
+    Object.entries(componentValues).forEach(([id, comp]) => {
       if (comp.enabled) {
         if (comp.type === 'earning') {
           totalEarnings += comp.amount;
@@ -163,9 +121,7 @@ const EmployeePayroll = () => {
       }
     });
 
-    totalDeductions += leaveDeduction;
-
-    const grossSalary = basicSalary + totalEarnings;
+    const grossSalary = totalEarnings;
     const netSalary = grossSalary - totalDeductions;
 
     return {
@@ -173,32 +129,19 @@ const EmployeePayroll = () => {
       totalEarnings,
       totalDeductions,
       grossSalary,
-      netSalary,
-      ...leaveData,
-      leaveDeduction
+      netSalary
     };
   };
 
   const salarySummary = calculateSalarySummary();
 
   const handleSubmit = async () => {
-    const monthNumber = months.indexOf(selectedMonth) + 1;
-    const salarySummary = calculateSalarySummary();
-
     const payload = {
       employee_id: Number(selectedEmployee),
-      month: monthNumber,
-      year: Number(selectedYear),
       basic_salary: Number(basicSalary),
       total_earnings: Number(salarySummary.totalEarnings.toFixed(2)),
       total_deductions: Number(salarySummary.totalDeductions.toFixed(2)),
-      gross_salary: Number((basicSalary + salarySummary.totalEarnings).toFixed(2)),
-      leave_deductions: Number(salarySummary.leaveDeduction.toFixed(2)),
-      total_days_in_month: Number(salarySummary.totalDaysInMonth),
-      total_working_days: Number(salarySummary.totalWorkingDays),
-      total_leaves: Number(salarySummary.totalLeaves),
-      total_free_leaves: Number(salarySummary.totalFreeLeaves),
-      total_paid_leaves: Number(salarySummary.totalPaidLeaves),
+      gross_salary: Number(salarySummary.grossSalary.toFixed(2)),
       net_salary: Number(salarySummary.netSalary.toFixed(2))
     };
 
@@ -223,7 +166,7 @@ const EmployeePayroll = () => {
         
         <div className="card-body p-3">
           <div className="row g-2 mb-3">
-            <div className="col-md-4">
+            <div className="col-md-12">
               <label className="form-label small fw-bold">Employee</label>
               <select
                 className="form-select form-select-sm"
@@ -238,95 +181,10 @@ const EmployeePayroll = () => {
                 ))}
               </select>
             </div>
-
-            <div className="col-md-4">
-              <label className="form-label small fw-bold">Month</label>
-              <select
-                className="form-select form-select-sm"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-              >
-                <option value="">Select Month</option>
-                {months.map((month, index) => (
-                  <option key={index} value={month}>{month}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label small fw-bold">Year</label>
-              <select
-                className="form-select form-select-sm"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-              >
-                <option value="">Select Year</option>
-                {years.map((year, index) => (
-                  <option key={index} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
           </div>
 
           {showSalaryInput && (
             <div className="border-top pt-3">
-              <h6 className="small fw-bold mb-3">Salary for {selectedMonth} {selectedYear}</h6>
-              
-              {/* Basic Salary Input */}
-              <div className="row g-2 mb-3">
-                <div className="col-md-6">
-                  <label className="form-label small">Basic Salary (₹)</label>
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    value={basicSalary}
-                    onChange={(e) => setBasicSalary(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter basic salary"
-                  />
-                </div>
-              </div>
-
-              {/* Leave Information Card */}
-              <div className="card mb-3">
-                <div className="card-header bg-light py-2">
-                  <h6 className="small fw-bold mb-0">Leave Information</h6>
-                </div>
-                <div className="card-body p-3">
-                  <div className="row">
-                    <div className="col-md-4">
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Total Days in Month:</span>
-                        <span className="small fw-bold">{leaveData.totalDaysInMonth}</span>
-                      </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Working Days:</span>
-                        <span className="small fw-bold">{leaveData.totalWorkingDays}</span>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Total Leaves:</span>
-                        <span className="small fw-bold">{leaveData.totalLeaves}</span>
-                      </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Paid Leaves:</span>
-                        <span className="small fw-bold text-success">{leaveData.totalPaidLeaves}</span>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Free Leaves:</span>
-                        <span className="small fw-bold text-danger">{leaveData.totalFreeLeaves}</span>
-                      </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Leave Deduction:</span>
-                        <span className="small fw-bold text-danger">₹{leaveDeduction.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Salary Components Table */}
               <div className="table-responsive mb-4">
                 <table className="table table-sm table-bordered">
@@ -352,6 +210,7 @@ const EmployeePayroll = () => {
                               type="checkbox"
                               checked={componentValue?.enabled || false}
                               onChange={() => handleComponentToggle(component.id)}
+                              disabled={component.name.toLowerCase() === 'basic salary'} // Disable toggle for Basic Salary
                             />
                           </td>
                           <td>{component.name}</td>
@@ -365,7 +224,8 @@ const EmployeePayroll = () => {
                               <select
                                 className="form-select form-select-sm"
                                 value={componentValue?.value_type || 'percentage'}
-                                onChange={(e) => handleValueTypeChange(component.id, e.target.value)}
+                                onChange={(e) => handleValueTypeChange(component.id, e.target.value, component.name)}
+                                disabled={component.name.toLowerCase() === 'basic salary'} // Disable type change for Basic Salary
                               >
                                 <option value="percentage">Percentage</option>
                                 <option value="flat">Flat</option>
@@ -381,7 +241,7 @@ const EmployeePayroll = () => {
                                   type="number"
                                   className="form-control form-control-sm"
                                   value={componentValue?.value || ''}
-                                  onChange={(e) => handleValueChange(component.id, e.target.value)}
+                                  onChange={(e) => handleValueChange(component.id, e.target.value, component.name)}
                                   placeholder="Enter amount"
                                 />
                               ) : (
@@ -390,7 +250,7 @@ const EmployeePayroll = () => {
                                     type="number"
                                     className="form-control"
                                     value={componentValue?.value || ''}
-                                    onChange={(e) => handleValueChange(component.id, e.target.value)}
+                                    onChange={(e) => handleValueChange(component.id, e.target.value, component.name)}
                                     placeholder="Percentage"
                                   />
                                   <span className="input-group-text">%</span>
@@ -425,25 +285,17 @@ const EmployeePayroll = () => {
                     <div className="col-md-6">
                       <div className="d-flex justify-content-between mb-2">
                         <span className="small">Basic Salary:</span>
-                        <span className="small fw-bold">₹{salarySummary.basicSalary.toFixed(2)}</span>
+                        <span className="small fw-bold">₹{basicSalary.toFixed(2)}</span>
                       </div>
                       <div className="d-flex justify-content-between mb-2">
                         <span className="small">Total Earnings:</span>
                         <span className="small fw-bold text-success">₹{salarySummary.totalEarnings.toFixed(2)}</span>
                       </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Total Deductions:</span>
-                        <span className="small fw-bold text-danger">₹{salarySummary.totalDeductions.toFixed(2)}</span>
-                      </div>
                     </div>
                     <div className="col-md-6">
                       <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Gross Salary:</span>
-                        <span className="small fw-bold">₹{salarySummary.grossSalary.toFixed(2)}</span>
-                      </div>
-                      <div className="d-flex justify-content-between mb-2">
-                        <span className="small">Leave Deductions:</span>
-                        <span className="small fw-bold text-danger">₹{salarySummary.leaveDeduction.toFixed(2)}</span>
+                        <span className="small">Total Deductions:</span>
+                        <span className="small fw-bold text-danger">₹{salarySummary.totalDeductions.toFixed(2)}</span>
                       </div>
                       <div className="d-flex justify-content-between">
                         <span className="small">Net Salary:</span>
@@ -459,7 +311,6 @@ const EmployeePayroll = () => {
                 <button 
                   className="btn btn-primary btn-sm"
                   onClick={handleSubmit}
-                  disabled={!basicSalary || basicSalary <= 0}
                 >
                   Save Payroll
                 </button>
