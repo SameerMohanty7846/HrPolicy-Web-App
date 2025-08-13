@@ -200,213 +200,303 @@ export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
 // Insert Payroll Record
 
 
-export const createPayroll = async (req, res) => {
-    try {
-        const {
-            employee_id,
-            month,
-            year,
-            basic_salary,
-            total_days_in_month = null,
-            total_working_days = null,
-            total_leaves = null,
-            total_free_leaves = null,
-            total_paid_leaves = null,
-            leave_deductions = 0,
-            total_earnings = 0,
-            total_deductions = 0,
-            gross_salary = 0,
-            net_salary
-        } = req.body;
+// export const createPayroll = async (req, res) => {
+//     try {
+//         const {
+//             employee_id,
+//             month,
+//             year,
+//             basic_salary,
+//             total_days_in_month = null,
+//             total_working_days = null,
+//             total_leaves = null,
+//             total_free_leaves = null,
+//             total_paid_leaves = null,
+//             leave_deductions = 0,
+//             total_earnings = 0,
+//             total_deductions = 0,
+//             gross_salary = 0,
+//             net_salary
+//         } = req.body;
 
-        // Required fields check
-        if (!employee_id || !month || !year || !basic_salary || net_salary === undefined) {
-            return res.status(400).json({
-                success: false,
-                message: "Missing required fields"
-            });
+//         // Required fields check
+//         if (!employee_id || !month || !year || !basic_salary || net_salary === undefined) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Missing required fields"
+//             });
+//         }
+
+//         // Month validation
+//         if (month < 1 || month > 12) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Month must be between 1 and 12"
+//             });
+//         }
+
+//         const connection = db.promise();
+//         await connection.query("START TRANSACTION");
+
+//         // Duplicate check
+//         const [existing] = await connection.query(
+//             `SELECT id FROM monthly_salary_reports WHERE employee_id = ? AND month = ? AND year = ?`,
+//             [employee_id, month, year]
+//         );
+//         if (existing.length > 0) {
+//             await connection.query("ROLLBACK");
+//             return res.status(409).json({
+//                 success: false,
+//                 message: "Payroll already exists for this employee/month/year",
+//                 existing_id: existing[0].id
+//             });
+//         }
+
+//         // Insert into monthly_salary_reports
+//         const insertSql = `
+//             INSERT INTO monthly_salary_reports (
+//                 employee_id, month, year, basic_salary,
+//                 total_days_in_month, total_working_days, total_leaves,
+//                 total_free_leaves, total_paid_leaves, leave_deductions,
+//                 total_earnings, total_deductions, gross_salary, net_salary
+//             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//         `;
+//         const [result] = await connection.query(insertSql, [
+//             employee_id,
+//             month,
+//             year,
+//             basic_salary,
+//             total_days_in_month,
+//             total_working_days,
+//             total_leaves,
+//             total_free_leaves,
+//             total_paid_leaves,
+//             leave_deductions,
+//             total_earnings,
+//             total_deductions,
+//             gross_salary,
+//             net_salary
+//         ]);
+
+//         await connection.query("COMMIT");
+
+//         return res.status(201).json({
+//             success: true,
+//             payroll_id: result.insertId,
+//             message: "Payroll record created successfully"
+//         });
+
+//     } catch (err) {
+//         console.error("Error creating payroll:", err);
+//         await db.promise().query("ROLLBACK");
+
+//         if (err.code === 'ER_DUP_ENTRY') {
+//             return res.status(409).json({
+//                 success: false,
+//                 message: "Payroll record already exists for this employee/month/year"
+//             });
+//         }
+//         if (err.code === 'ER_NO_REFERENCED_ROW') {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid employee_id: Employee does not exist"
+//             });
+//         }
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to create payroll record"
+//         });
+//     }
+// };
+
+
+
+
+// // Get payroll records for ALL employees for a specific month/year
+// export const getAllPayrolls = async (req, res) => {
+//   try {
+//     const { month, year } = req.params; // Only month and year from route
+
+//     // Month names for formatting
+//     const months = [
+//       'January', 'February', 'March', 'April', 'May', 'June',
+//       'July', 'August', 'September', 'October', 'November', 'December'
+//     ];
+
+//     // SQL query without employee_id filter
+//     const sql = `
+//       SELECT 
+//         p.payroll_id,
+//         p.employee_id,
+//         p.month,
+//         p.year,
+//         p.basic_salary,
+//         p.total_earnings,
+//         p.total_deductions,
+//         p.gross_salary,
+//         p.leave_deductions,
+//         p.leave_days,
+//         p.net_salary,
+//         p.created_at,
+//         p.updated_at,
+//         e.id AS emp_id,
+//         e.name AS emp_name,
+//         e.email AS emp_email,
+//         e.phone AS emp_phone,
+//         e.salary AS emp_monthly_salary,
+//         e.dateOfJoining AS emp_join_date,
+//         e.employeeType AS emp_type,
+//         e.experience AS emp_experience,
+//         e.department AS emp_department
+//       FROM payroll_master p
+//       JOIN employees e ON p.employee_id = e.id
+//       WHERE p.month = ? AND p.year = ?
+//       ORDER BY e.name ASC
+//     `;
+
+//     // Execute query
+//     const [results] = await db.promise().query(sql, [month, year]);
+
+//     // Format results
+//     const formattedResults = results.map(record => ({
+//       payroll_id: record.payroll_id,
+//       employee: {
+//         id: record.emp_id,
+//         name: record.emp_name,
+//         email: record.emp_email,
+//         phone: record.emp_phone,
+//         monthly_salary: Number(record.emp_monthly_salary),
+//         date_of_joining: record.emp_join_date,
+//         type: record.emp_type,
+//         experience: Number(record.emp_experience),
+//         department: record.emp_department
+//       },
+//       period: {
+//         month: record.month,
+//         month_name: months[record.month - 1],
+//         year: record.year,
+//         formatted: `${months[record.month - 1]} ${record.year}`
+//       },
+//       salary_components: {
+//         basic: Number(record.basic_salary),
+//         total_earnings: Number(record.total_earnings),
+//         total_deductions: Number(record.total_deductions),
+//         gross: Number(record.gross_salary),
+//         net: Number(record.net_salary)
+//       },
+//       leave_details: {
+//         days_taken: record.leave_days,
+//         amount_deducted: Number(record.leave_deductions)
+//       },
+//       system_info: {
+//         created_at: record.created_at,
+//         updated_at: record.updated_at
+//       }
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       count: formattedResults.length,
+//       data: formattedResults
+//     });
+
+//   } catch (err) {
+//     console.error("Error fetching payroll records:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch payroll records",
+//       error: process.env.NODE_ENV === 'development' ? err.message : undefined
+//     });
+//   }
+// };
+
+
+
+//storing employee information
+// Store Employee Salary Info + Salary Partitions
+export const addEmployeeSalary = (req, res) => {
+    const { 
+        employee_id,
+        employee_name,       // Name of employee
+        basic_salary,        // Basic Salary
+        other_earnings,      // New: replaces total_earnings in table
+        total_deductions,
+        gross_salary,
+        employee_net_salary,
+        partitions // Array of { component_name, component_type, input_type, value, based_on, amount }
+    } = req.body;
+
+    db.beginTransaction((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Transaction start failed', details: err });
         }
 
-        // Month validation
-        if (month < 1 || month > 12) {
-            return res.status(400).json({
-                success: false,
-                message: "Month must be between 1 and 12"
-            });
-        }
-
-        const connection = db.promise();
-        await connection.query("START TRANSACTION");
-
-        // Duplicate check
-        const [existing] = await connection.query(
-            `SELECT id FROM monthly_salary_reports WHERE employee_id = ? AND month = ? AND year = ?`,
-            [employee_id, month, year]
-        );
-        if (existing.length > 0) {
-            await connection.query("ROLLBACK");
-            return res.status(409).json({
-                success: false,
-                message: "Payroll already exists for this employee/month/year",
-                existing_id: existing[0].id
-            });
-        }
-
-        // Insert into monthly_salary_reports
-        const insertSql = `
-            INSERT INTO monthly_salary_reports (
-                employee_id, month, year, basic_salary,
-                total_days_in_month, total_working_days, total_leaves,
-                total_free_leaves, total_paid_leaves, leave_deductions,
-                total_earnings, total_deductions, gross_salary, net_salary
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        // 1️⃣ Insert into EmployeeSalaryInfo
+        const salaryInfoQuery = `
+            INSERT INTO EmployeeSalaryInfo 
+                (employee_id, employee_name, basic_salary, other_earnings, total_deductions, gross_salary, employee_net_salary)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const [result] = await connection.query(insertSql, [
-            employee_id,
-            month,
-            year,
-            basic_salary,
-            total_days_in_month,
-            total_working_days,
-            total_leaves,
-            total_free_leaves,
-            total_paid_leaves,
-            leave_deductions,
-            total_earnings,
-            total_deductions,
-            gross_salary,
-            net_salary
-        ]);
+        const salaryInfoValues = [
+            employee_id, employee_name, basic_salary, other_earnings, total_deductions, gross_salary, employee_net_salary
+        ];
 
-        await connection.query("COMMIT");
+        db.query(salaryInfoQuery, salaryInfoValues, (err, result) => {
+            if (err) {
+                return db.rollback(() => {
+                    res.status(500).json({ error: 'Failed to insert salary info', details: err });
+                });
+            }
 
-        return res.status(201).json({
-            success: true,
-            payroll_id: result.insertId,
-            message: "Payroll record created successfully"
-        });
+            const salaryId = result.insertId; // Generated salary_id for linking
 
-    } catch (err) {
-        console.error("Error creating payroll:", err);
-        await db.promise().query("ROLLBACK");
+            // 2️⃣ Insert into EmployeeSalaryPartition (if any)
+            if (!partitions || partitions.length === 0) {
+                return db.commit((err) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            res.status(500).json({ error: 'Transaction commit failed', details: err });
+                        });
+                    }
+                    res.status(201).json({ message: 'Salary data saved successfully (no partitions)', salary_id: salaryId });
+                });
+            }
 
-        if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({
-                success: false,
-                message: "Payroll record already exists for this employee/month/year"
+            const partitionQuery = `
+                INSERT INTO EmployeeSalaryPartition 
+                    (salary_id, component_name, component_type, input_type, value, based_on, amount)
+                VALUES ?
+            `;
+
+            const partitionValues = partitions.map(p => [
+                salaryId,
+                p.component_name,
+                p.component_type,
+                p.input_type || null,
+                p.value || null,
+                p.based_on || null,
+                p.amount || null
+            ]);
+
+            db.query(partitionQuery, [partitionValues], (err) => {
+                if (err) {
+                    return db.rollback(() => {
+                        res.status(500).json({ error: 'Failed to insert salary partitions', details: err });
+                    });
+                }
+
+                // ✅ Commit transaction
+                db.commit((err) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            res.status(500).json({ error: 'Transaction commit failed', details: err });
+                        });
+                    }
+                    res.status(201).json({ message: 'Salary data saved successfully', salary_id: salaryId });
+                });
             });
-        }
-        if (err.code === 'ER_NO_REFERENCED_ROW') {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid employee_id: Employee does not exist"
-            });
-        }
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to create payroll record"
         });
-    }
+    });
 };
 
-
-
-
-// Get payroll records for ALL employees for a specific month/year
-export const getAllPayrolls = async (req, res) => {
-  try {
-    const { month, year } = req.params; // Only month and year from route
-
-    // Month names for formatting
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    // SQL query without employee_id filter
-    const sql = `
-      SELECT 
-        p.payroll_id,
-        p.employee_id,
-        p.month,
-        p.year,
-        p.basic_salary,
-        p.total_earnings,
-        p.total_deductions,
-        p.gross_salary,
-        p.leave_deductions,
-        p.leave_days,
-        p.net_salary,
-        p.created_at,
-        p.updated_at,
-        e.id AS emp_id,
-        e.name AS emp_name,
-        e.email AS emp_email,
-        e.phone AS emp_phone,
-        e.salary AS emp_monthly_salary,
-        e.dateOfJoining AS emp_join_date,
-        e.employeeType AS emp_type,
-        e.experience AS emp_experience,
-        e.department AS emp_department
-      FROM payroll_master p
-      JOIN employees e ON p.employee_id = e.id
-      WHERE p.month = ? AND p.year = ?
-      ORDER BY e.name ASC
-    `;
-
-    // Execute query
-    const [results] = await db.promise().query(sql, [month, year]);
-
-    // Format results
-    const formattedResults = results.map(record => ({
-      payroll_id: record.payroll_id,
-      employee: {
-        id: record.emp_id,
-        name: record.emp_name,
-        email: record.emp_email,
-        phone: record.emp_phone,
-        monthly_salary: Number(record.emp_monthly_salary),
-        date_of_joining: record.emp_join_date,
-        type: record.emp_type,
-        experience: Number(record.emp_experience),
-        department: record.emp_department
-      },
-      period: {
-        month: record.month,
-        month_name: months[record.month - 1],
-        year: record.year,
-        formatted: `${months[record.month - 1]} ${record.year}`
-      },
-      salary_components: {
-        basic: Number(record.basic_salary),
-        total_earnings: Number(record.total_earnings),
-        total_deductions: Number(record.total_deductions),
-        gross: Number(record.gross_salary),
-        net: Number(record.net_salary)
-      },
-      leave_details: {
-        days_taken: record.leave_days,
-        amount_deducted: Number(record.leave_deductions)
-      },
-      system_info: {
-        created_at: record.created_at,
-        updated_at: record.updated_at
-      }
-    }));
-
-    res.status(200).json({
-      success: true,
-      count: formattedResults.length,
-      data: formattedResults
-    });
-
-  } catch (err) {
-    console.error("Error fetching payroll records:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch payroll records",
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-  }
-};
