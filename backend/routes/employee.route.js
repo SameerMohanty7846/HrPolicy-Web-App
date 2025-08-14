@@ -60,7 +60,7 @@ import {
   getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
 import { getAttendanceReport, getMonthlySalaryReport, insertSalaryReport } from "../controller/employee.attendance.controller.js";
-import { addEmployeeSalary, createSalaryComponent, getAllSalaryComponents, getAllSalaryComponentsExcludingFirst, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType, getFreeLeavesByEmployeeAndMonth, getMonthlySalaryData } from "../controller/salary.component.controller.js";
+import { addEmployeeSalary, createSalaryComponent, getAllSalaryComponents, getAllSalaryComponentsExcludingFirst, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType, getFreeLeavesByEmployeeAndMonth, getMonthlySalaryData, saveSalaryReports } from "../controller/salary.component.controller.js";
 
 const router = express.Router();
 
@@ -166,5 +166,6 @@ router.get('/leaves/free/:employee_id/:monthYear', getFreeLeavesByEmployeeAndMon
 
 router.post('/salary/employee-salary-info', addEmployeeSalary);
 router.get('/payroll-report/:year/:month', getMonthlySalaryData);
+router.post("/monthly-salary-reports", saveSalaryReports);
 
 export default router;

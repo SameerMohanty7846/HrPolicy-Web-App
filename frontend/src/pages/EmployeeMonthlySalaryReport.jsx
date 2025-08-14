@@ -6,6 +6,8 @@ const EmployeeMonthlySalaryReport = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Months and years for dropdowns
   const months = [
@@ -50,6 +52,78 @@ const EmployeeMonthlySalaryReport = () => {
       setError('Failed to fetch salary report');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToDatabase = async () => {
+    if (!reportData || !reportData.data || reportData.data.length === 0) {
+      setError('No data to save');
+      return;
+    }
+
+    setSaveLoading(true);
+    setError(null);
+
+    try {
+      // Prepare the data in the format expected by your API
+      const payload = reportData.data.map(employee => {
+        const daysInMonth = reportData.total_days_in_month;
+        const daysPresent = employee.days_present;
+        const paidLeaves = employee.paid_leaves;
+        
+        const {
+          earnings,
+          deductions,
+          totalEarnings,
+          totalDeductions,
+          totalAmount
+        } = processPartitions(employee.partitions, daysInMonth, daysPresent, paidLeaves);
+
+        return {
+          month_year: reportData.month_year,
+          month: month,
+          year: year,
+          total_days: daysInMonth,
+          employee_id: employee.employee_id,
+          employee_name: employee.employee_name,
+          days_present: daysPresent,
+          paid_leaves: paidLeaves,
+          employee_salary: employee.net_salary,
+          earnings: earnings.reduce((acc, curr) => {
+            acc[curr.component_name] = curr.calculatedAmount;
+            return acc;
+          }, {}),
+          deductions: deductions.reduce((acc, curr) => {
+            acc[curr.component_name] = curr.calculatedAmount;
+            return acc;
+          }, {}),
+          total_earnings: totalEarnings,
+          total_deductions: totalDeductions,
+          total_amount: totalAmount
+        };
+      });
+
+      const response = await fetch('http://localhost:2000/api/monthly-salary-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setError(result.message || 'Failed to save salary reports');
+      }
+    } catch (error) {
+      console.error('Error saving salary reports:', error);
+      setError('Failed to save salary reports');
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -113,9 +187,27 @@ const EmployeeMonthlySalaryReport = () => {
         <div className="card-header bg-primary text-white py-3">
           <div className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Employee Monthly Salary Report</h5>
-            <button className="btn btn-light btn-sm">
-              <i className="fas fa-download me-2"></i>Download Report
-            </button>
+            <div>
+              <button 
+                className="btn btn-light btn-sm me-2"
+                onClick={handleSaveToDatabase}
+                disabled={saveLoading || !hasData}
+              >
+                {saveLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save me-2"></i>Save to Database
+                  </>
+                )}
+              </button>
+              <button className="btn btn-light btn-sm">
+                <i className="fas fa-download me-2"></i>Download Report
+              </button>
+            </div>
           </div>
         </div>
         
@@ -162,7 +254,12 @@ const EmployeeMonthlySalaryReport = () => {
             </div>
           </div>
 
-          {/* Error Message */}
+          {/* Success/Error Messages */}
+          {saveSuccess && (
+            <div className="alert alert-success">
+              Salary reports saved to database successfully!
+            </div>
+          )}
           {error && (
             <div className="alert alert-danger">
               {error}

@@ -700,4 +700,56 @@ export const getMonthlySalaryData = (req, res) => {
 };
 
 
-//some mistake with the controller corect it 
+//save monthly salary report 
+
+/**
+ * Save multiple salary reports
+ * POST /api/salary-reports
+ */
+export const saveSalaryReports = (req, res) => {
+    const salaryReports = req.body;
+
+    if (!Array.isArray(salaryReports) || salaryReports.length === 0) {
+        return res.status(400).json({ message: "Invalid data format" });
+    }
+
+    const insertQuery = `
+        INSERT INTO salary_report 
+        (
+            month_year, month, year, total_days, employee_id, employee_name,
+            days_present, paid_leaves, employee_salary,
+            earnings, deductions,
+            total_earnings, total_deductions, total_amount
+        )
+        VALUES ?
+    `;
+
+    const values = salaryReports.map(report => [
+        report.month_year,
+        report.month,
+        report.year,
+        report.total_days,
+        report.employee_id,
+        report.employee_name,
+        report.days_present,
+        report.paid_leaves,
+        report.employee_salary,
+        JSON.stringify(report.earnings || {}),
+        JSON.stringify(report.deductions || {}),
+        report.total_earnings,
+        report.total_deductions,
+        report.total_amount
+    ]);
+
+    db.query(insertQuery, [values], (err, result) => {
+        if (err) {
+            console.error("Error inserting salary reports:", err);
+            return res.status(500).json({ message: "Database error", error: err });
+        }
+
+        res.status(201).json({
+            message: "Salary reports saved successfully",
+            insertedRows: result.affectedRows
+        });
+    });
+};
