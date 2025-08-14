@@ -4,7 +4,8 @@ const EmployeeMonthlySalaryReport = () => {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
-  const [salaryData, setSalaryData] = useState([]);
+  const [reportData, setReportData] = useState(null);
+  const [error, setError] = useState(null);
 
   // Months and years for dropdowns
   const months = [
@@ -30,112 +31,27 @@ const EmployeeMonthlySalaryReport = () => {
     }
   }, [month, year]);
 
-  const fetchSalaryReport = () => {
+  const fetchSalaryReport = async () => {
     setLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      // Dummy salary data with detailed earnings and deductions
-      const dummySalaryData = [
-        {
-          employee_id: 101,
-          employee_name: 'John Doe',
-          employee_salary: 25000,
-          total_days_present: 22,
-          total_paid_leaves: 3,
-          earnings: [
-            { name: 'HRA', amount: 12500 },
-            { name: 'DA', amount: 5000 },
-            { name: 'Bonus', amount: 3000 }
-          ],
-          deductions: [
-            { name: 'PF', amount: 1800 },
-            { name: 'Professional Tax', amount: 200 },
-            { name: 'TDS', amount: 1500 }
-          ],
-          total_amount_to_be_paid: (25000 + 12500 + 5000 + 3000) - (1800 + 200 + 1500)
-        },
-        {
-          employee_id: 102,
-          employee_name: 'Jane Smith',
-          employee_salary: 30000,
-          total_days_present: 20,
-          total_paid_leaves: 5,
-          earnings: [
-            { name: 'HRA', amount: 15000 },
-            { name: 'DA', amount: 6000 },
-            { name: 'Bonus', amount: 4000 }
-          ],
-          deductions: [
-            { name: 'PF', amount: 2160 },
-            { name: 'Professional Tax', amount: 200 },
-            { name: 'TDS', amount: 1800 }
-          ],
-          total_amount_to_be_paid: (30000 + 15000 + 6000 + 4000) - (2160 + 200 + 1800)
-        },
-        {
-          employee_id: 103,
-          employee_name: 'Robert Johnson',
-          employee_salary: 22000,
-          total_days_present: 18,
-          total_paid_leaves: 7,
-          earnings: [
-            { name: 'HRA', amount: 11000 },
-            { name: 'DA', amount: 4400 },
-            { name: 'Bonus', amount: 2000 }
-          ],
-          deductions: [
-            { name: 'PF', amount: 1584 },
-            { name: 'Professional Tax', amount: 200 },
-            { name: 'TDS', amount: 1320 }
-          ],
-          total_amount_to_be_paid: (22000 + 11000 + 4400 + 2000) - (1584 + 200 + 1320)
-        }
-      ];
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:2000/api/payroll-report/${year}/${month}`);
+      const data = await response.json();
       
-      setSalaryData(dummySalaryData);
+      if (data.message === "No data found") {
+        setReportData({ data: [] });
+      } else if (data.data) {
+        setReportData(data);
+      } else {
+        setReportData({ data: [] });
+      }
+    } catch (error) {
+      console.error('Error fetching salary report:', error);
+      setError('Failed to fetch salary report');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
-
-  // Calculate totals for summary
-  const calculateTotals = () => {
-    const totals = {
-      employee_salary: 0,
-      total_amount_to_be_paid: 0,
-      total_days_present: 0,
-      total_paid_leaves: 0,
-      earnings: {},
-      deductions: {}
-    };
-
-    salaryData.forEach(employee => {
-      totals.employee_salary += employee.employee_salary || 0;
-      totals.total_amount_to_be_paid += employee.total_amount_to_be_paid || 0;
-      totals.total_days_present += employee.total_days_present || 0;
-      totals.total_paid_leaves += employee.total_paid_leaves || 0;
-
-      // Calculate earnings totals
-      employee.earnings.forEach(earning => {
-        if (!totals.earnings[earning.name]) {
-          totals.earnings[earning.name] = 0;
-        }
-        totals.earnings[earning.name] += earning.amount;
-      });
-
-      // Calculate deductions totals
-      employee.deductions.forEach(deduction => {
-        if (!totals.deductions[deduction.name]) {
-          totals.deductions[deduction.name] = 0;
-        }
-        totals.deductions[deduction.name] += deduction.amount;
-      });
-    });
-
-    return totals;
-  };
-
-  const totals = calculateTotals();
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -145,6 +61,15 @@ const EmployeeMonthlySalaryReport = () => {
       maximumFractionDigits: 0
     }).format(amount);
   };
+
+  // Categorize partitions into earnings and deductions
+  const categorizePartitions = (partitions) => {
+    const earnings = partitions?.filter(p => p.component_type === 'earning') || [];
+    const deductions = partitions?.filter(p => p.component_type === 'deduction') || [];
+    return { earnings, deductions };
+  };
+
+  const hasData = reportData?.data?.length > 0;
 
   return (
     <div className="container-fluid py-4">
@@ -201,121 +126,99 @@ const EmployeeMonthlySalaryReport = () => {
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="alert alert-danger">
+              {error}
+            </div>
+          )}
+
           {/* Report Table */}
-          {salaryData.length > 0 ? (
+          {hasData ? (
             <div className="table-responsive">
               <table className="table table-bordered table-striped table-hover">
                 <thead className="table-light">
                   <tr>
+                    <th>Month-Year</th>
+                    <th>Total Days</th>
                     <th>Employee ID</th>
                     <th>Employee Name</th>
-                    <th>Employee Salary</th>
-                    <th>Days Present</th>
-                    <th>Paid Leaves</th>
-                    <th className="bg-success bg-opacity-10" style={{ minWidth: '250px' }}>Total Earnings</th>
-                    <th className="bg-danger bg-opacity-10" style={{ minWidth: '250px' }}>Total Deductions</th>
-                    <th>Total Amount to be Paid</th>
+                    <th className="text-center">Days Present</th>
+                    <th className="text-center">Paid Leaves</th>
+                    <th className="text-end">Net Salary</th>
+                    <th className="bg-success bg-opacity-10">Earnings</th>
+                    <th className="bg-danger bg-opacity-10">Deductions</th>
+                    <th className="text-end fw-bold">Total Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {salaryData.map(employee => (
-                    <tr key={employee.employee_id}>
-                      <td>{employee.employee_id}</td>
-                      <td>{employee.employee_name}</td>
-                      <td className="text-end">{formatCurrency(employee.employee_salary)}</td>
-                      <td className="text-center">{employee.total_days_present}</td>
-                      <td className="text-center">{employee.total_paid_leaves}</td>
-                      
-                      {/* Earnings Column */}
-                      <td className="bg-success bg-opacity-10">
-                        <div className="d-flex flex-column">
-                          {employee.earnings.map((earning, index) => (
-                            <div key={index} className="d-flex justify-content-between">
-                              <span>{earning.name}:</span>
-                              <span>{formatCurrency(earning.amount)}</span>
-                            </div>
-                          ))}
-                          <div className="d-flex justify-content-between fw-bold border-top mt-1 pt-1">
-                            <span>Total Earnings:</span>
-                            <span>{formatCurrency(employee.earnings.reduce((sum, e) => sum + e.amount, 0))}</span>
+                  {reportData.data.map(employee => {
+                    const { earnings, deductions } = categorizePartitions(employee.partitions);
+                    const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
+                    const totalDeductions = deductions.reduce((sum, d) => sum + d.amount, 0);
+                    const totalAmount = employee.net_salary;
+
+                    return (
+                      <tr key={employee.employee_id}>
+                        <td>{reportData.month_year}</td>
+                        <td>{reportData.total_days_in_month}</td>
+                        <td>{employee.employee_id}</td>
+                        <td>{employee.employee_name}</td>
+                        <td className="text-center">{employee.days_present}</td>
+                        <td className="text-center">{employee.paid_leaves}</td>
+                        <td className="text-end">{formatCurrency(employee.net_salary)}</td>
+                        
+                        {/* Earnings Column */}
+                        <td className="bg-success bg-opacity-10">
+                          <div className="d-flex flex-column">
+                            {earnings.length > 0 ? (
+                              <>
+                                {earnings.map((earning, index) => (
+                                  <div key={index} className="d-flex justify-content-between">
+                                    <span>{earning.component_name}:</span>
+                                    <span>{formatCurrency(earning.amount)}</span>
+                                  </div>
+                                ))}
+                                <div className="d-flex justify-content-between fw-bold border-top mt-1 pt-1">
+                                  <span>Total:</span>
+                                  <span>{formatCurrency(totalEarnings)}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-muted">No earnings</div>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      
-                      {/* Deductions Column */}
-                      <td className="bg-danger bg-opacity-10">
-                        <div className="d-flex flex-column">
-                          {employee.deductions.map((deduction, index) => (
-                            <div key={index} className="d-flex justify-content-between">
-                              <span>{deduction.name}:</span>
-                              <span>{formatCurrency(deduction.amount)}</span>
-                            </div>
-                          ))}
-                          <div className="d-flex justify-content-between fw-bold border-top mt-1 pt-1">
-                            <span>Total Deductions:</span>
-                            <span>{formatCurrency(employee.deductions.reduce((sum, d) => sum + d.amount, 0))}</span>
+                        </td>
+                        
+                        {/* Deductions Column */}
+                        <td className="bg-danger bg-opacity-10">
+                          <div className="d-flex flex-column">
+                            {deductions.length > 0 ? (
+                              <>
+                                {deductions.map((deduction, index) => (
+                                  <div key={index} className="d-flex justify-content-between">
+                                    <span>{deduction.component_name}:</span>
+                                    <span>{formatCurrency(deduction.amount)}</span>
+                                  </div>
+                                ))}
+                                <div className="d-flex justify-content-between fw-bold border-top mt-1 pt-1">
+                                  <span>Total:</span>
+                                  <span>{formatCurrency(totalDeductions)}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-muted">No deductions</div>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      
-                      <td className="text-end fw-bold text-primary">
-                        {formatCurrency(employee.total_amount_to_be_paid)}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        
+                        <td className="text-end fw-bold text-primary">
+                          {formatCurrency(totalAmount)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
-                <tfoot className="table-light">
-                  <tr>
-                    <th colSpan="2" className="text-end">Total:</th>
-                    <th className="text-end">{formatCurrency(totals.employee_salary)}</th>
-                    <th className="text-center">{totals.total_days_present}</th>
-                    <th className="text-center">{totals.total_paid_leaves}</th>
-                    
-                    {/* Earnings Total */}
-                    <th className="bg-success bg-opacity-10">
-                      <div className="d-flex flex-column">
-                        {Object.entries(totals.earnings).map(([name, amount], index) => (
-                          <div key={index} className="d-flex justify-content-between">
-                            <span>{name}:</span>
-                            <span>{formatCurrency(amount)}</span>
-                          </div>
-                        ))}
-                        <div className="d-flex justify-content-between fw-bold border-top mt-1 pt-1">
-                          <span>Total Earnings:</span>
-                          <span>{formatCurrency(Object.values(totals.earnings).reduce((a, b) => a + b, 0))}</span>
-                        </div>
-                      </div>
-                    </th>
-                    
-                    {/* Deductions Total */}
-                    <th className="bg-danger bg-opacity-10">
-                      <div className="d-flex flex-column">
-                        {Object.entries(totals.deductions).map(([name, amount], index) => (
-                          <div key={index} className="d-flex justify-content-between">
-                            <span>{name}:</span>
-                            <span>{formatCurrency(amount)}</span>
-                          </div>
-                        ))}
-                        <div className="d-flex justify-content-between fw-bold border-top mt-1 pt-1">
-                          <span>Total Deductions:</span>
-                          <span>{formatCurrency(Object.values(totals.deductions).reduce((a, b) => a + b, 0))}</span>
-                        </div>
-                      </div>
-                    </th>
-                    
-                    <th className="text-end fw-bold text-primary">
-                      {formatCurrency(totals.total_amount_to_be_paid)}
-                    </th>
-                  </tr>
-                  <tr>
-                    <th colSpan="7" className="text-end">
-                      Net Amount to be Paid this Month:
-                    </th>
-                    <th className="text-end fw-bold text-success">
-                      {formatCurrency(totals.total_amount_to_be_paid)}
-                    </th>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           ) : (

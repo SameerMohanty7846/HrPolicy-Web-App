@@ -504,7 +504,6 @@ export const addEmployeeSalary = (req, res) => {
 export const getMonthlySalaryData = (req, res) => {
   const { month, year } = req.params;
 
-  // Convert month to number (support "7", "Jul", "July")
   const monthNumber = isNaN(month)
     ? new Date(`${month} 1, 2000`).getMonth() + 1
     : parseInt(month, 10);
@@ -518,7 +517,6 @@ export const getMonthlySalaryData = (req, res) => {
     return res.status(400).json({ error: 'Invalid year parameter' });
   }
 
-  // Helper function to execute queries with callback
   const executeQuery = (query, params) => {
     return new Promise((resolve, reject) => {
       db.query(query, params, (err, results) => {
@@ -528,10 +526,8 @@ export const getMonthlySalaryData = (req, res) => {
     });
   };
 
-  // Main execution
   (async () => {
     try {
-      // 1. Get attendance data (days present)
       const attendance = await executeQuery(`
         SELECT 
           a.emp_id AS employee_id,
@@ -543,7 +539,6 @@ export const getMonthlySalaryData = (req, res) => {
         GROUP BY a.emp_id, e.name
       `, [monthNumber, yearNumber]);
 
-      // 2. Get paid leaves data
       const firstDay = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-01`;
       const lastDay = new Date(yearNumber, monthNumber, 0).toISOString().split('T')[0];
 
@@ -569,13 +564,11 @@ export const getMonthlySalaryData = (req, res) => {
         GROUP BY la.employee_id, e.name
       `, [lastDay, firstDay, firstDay, lastDay]);
 
-      // 3. Get latest salary info per employee
       const salaryInfo = await executeQuery(`
         SELECT 
           s.employee_id, 
           s.employee_name, 
           s.employee_net_salary, 
-          s.total_deductions, 
           s.salary_id
         FROM EmployeeSalaryInfo s
         JOIN (
@@ -585,7 +578,6 @@ export const getMonthlySalaryData = (req, res) => {
         ) latest ON latest.employee_id = s.employee_id AND latest.max_created_at = s.created_at
       `);
 
-      // 4. Get salary partitions for those latest salary records
       const salaryPartitions = await executeQuery(`
         SELECT 
           esp.salary_id,
@@ -602,7 +594,6 @@ export const getMonthlySalaryData = (req, res) => {
         ) latest ON latest.employee_id = esi.employee_id AND latest.max_created_at = esi.created_at
       `);
 
-      // Process the data
       const nameMap = new Map();
       const attendanceMap = new Map();
       attendance.forEach(row => {
@@ -623,7 +614,6 @@ export const getMonthlySalaryData = (req, res) => {
         const empId = row.employee_id;
         salaryInfoMap.set(empId, {
           net_salary: Number(row.employee_net_salary) || 0,
-          total_deductions: Number(row.total_deductions) || 0,
           salary_id: row.salary_id
         });
         if (!nameMap.has(empId)) nameMap.set(empId, row.employee_name);
@@ -642,49 +632,57 @@ export const getMonthlySalaryData = (req, res) => {
         });
       });
 
-      // Combine all employee IDs
       const allEmpIds = new Set([
         ...attendance.map(row => row.employee_id),
         ...paidLeaves.map(row => row.employee_id),
         ...salaryInfo.map(row => row.employee_id)
       ]);
 
-      // Prepare final report
-      const report = Array.from(allEmpIds).map(empId => {
-        const earnings = (partitionsMap.get(empId) || [])
-          .filter(p => p.component_type === 'earning')
-          .reduce((sum, p) => sum + p.amount, 0);
+      let report = Array.from(allEmpIds).map(empId => ({
+        employee_id: empId,
+        employee_name: nameMap.get(empId) || '',
+        days_present: attendanceMap.get(empId) || 0,
+        paid_leaves: paidLeaveMap.get(empId) || 0,
+        net_salary: salaryInfoMap.get(empId)?.net_salary || 0,
+        partitions: partitionsMap.get(empId) || []
+      }));
 
-        const deductions = (partitionsMap.get(empId) || [])
-          .filter(p => p.component_type === 'deduction')
-          .reduce((sum, p) => sum + p.amount, 0);
+      // ✅ Exclude the first data record
+      if (report.length > 0) {
+        report = report.slice(1);
+      }
 
-        return {
-          employee_id: empId,
-          employee_name: nameMap.get(empId) || '',
-          days_present: attendanceMap.get(empId) || 0,
-          paid_leaves: paidLeaveMap.get(empId) || 0,
-          net_salary: salaryInfoMap.get(empId)?.net_salary || 0,
-          total_deductions: salaryInfoMap.get(empId)?.total_deductions || 0,
-          earnings,
-          deductions,
-          partitions: partitionsMap.get(empId) || []
-        };
-      });
+      // ✅ If all have 0 days_present and 0 paid_leaves → return no data found
+      const allZero = report.every(r => r.days_present === 0 && r.paid_leaves === 0);
+      if (report.length === 0 || allZero) {
+        return res.status(404).json({ message: 'No data found' });
+      }
 
-      res.status(200).json({ 
-        month: monthNumber, 
-        year: yearNumber, 
-        data: report 
+      // ✅ Additional fields
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const monthYearString = `${monthNames[monthNumber - 1]}-${yearNumber}`;
+      const totalDaysInMonth = new Date(yearNumber, monthNumber, 0).getDate();
+
+      res.status(200).json({
+        month: monthNumber,
+        year: yearNumber,
+        month_year: monthYearString,
+        total_days_in_month: totalDaysInMonth,
+        data: report
       });
 
     } catch (error) {
       console.error('Error in getMonthlySalaryData:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to generate salary report',
-        details: error.message 
+        details: error.message
       });
     }
   })();
 };
+
+
 //some mistake with the controller corect it 

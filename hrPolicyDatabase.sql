@@ -162,7 +162,7 @@ CREATE TABLE leave_applications (
   employee_id INT NOT NULL,
   employee_name VARCHAR(50) NOT NULL,
   leave_type VARCHAR(50), -- Earned, Casual, Sick
-  
+  leave_mode ENUM('Paid', 'Free') NOT NULL DEFAULT 'Paid', -- Paid or Free (LWP = Free)
   from_date DATE NOT NULL,
   to_date DATE NOT NULL,
   no_of_days INT NOT NULL, -- ✅ Will be passed from frontend
@@ -171,6 +171,7 @@ CREATE TABLE leave_applications (
   applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
+drop table leave_applications;
 CREATE TABLE hr_leave_policy (
   id INT PRIMARY KEY AUTO_INCREMENT,
   leave_type VARCHAR(50) NOT NULL UNIQUE,     -- e.g., Earned, Casual, Sick, etc.
@@ -215,21 +216,20 @@ CREATE TABLE attendance (
   FOREIGN KEY (emp_id) REFERENCES employees(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 DROP TABLE ATTENDANCE;
-CREATE TABLE monthly_salary_reports (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  employee_id INT NOT NULL,
-  month_year VARCHAR(7),
-  fixed_salary DECIMAL(10,2),
-  total_free_leaves INT,
-  paid_leaves INT,
-  daily_salary DECIMAL(10,2),
-  salary_deduction DECIMAL(10,2),
-  net_salary DECIMAL(10,2),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-drop table monthly_salary_reports;
+-- Main payroll table for fixed data
+select * from ATTENDANCE;
 
 
+select * from monthly_salary_reports;
+select * from additional_salary_info;
+
+
+
+
+
+
+
+-- FROM NOW ALL  RELATED TO SALARY COMPONENTS AND SLIP GENERATION -- 
 CREATE TABLE salary_component_policy_master (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
@@ -237,44 +237,41 @@ CREATE TABLE salary_component_policy_master (
     based_on VARCHAR(50),
     days_calculated BOOLEAN NOT NULL DEFAULT 1
 );
-
-drop table salary_component_policy_master;
-delete from salary_component_policy_master WHERE id=3;
-drop table salary_component_policy_master;
-select * from salary_component_policy_master;
-
-drop table  payroll_master;
-CREATE TABLE payroll_master (
-    payroll_id INT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE EmployeeSalaryInfo (
+    salary_id INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT NOT NULL,
-    month TINYINT NOT NULL,       -- 1-12 for Jan-Dec
-    year INT NOT NULL,
-    basic_salary DECIMAL(10,2) NOT NULL,
-    total_earnings DECIMAL(10,2) DEFAULT 0,
-    total_deductions DECIMAL(10,2) DEFAULT 0,
-    gross_salary DECIMAL(10,2) DEFAULT 0,
-    leave_deductions DECIMAL(10,2) DEFAULT 0,
-    leave_days INT DEFAULT 0,
-    net_salary DECIMAL(10,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE (employee_id, month, year),
-    FOREIGN KEY (employee_id) REFERENCES employees(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
-select * from payroll_master;
-CREATE TABLE payroll_components (
-    component_id INT PRIMARY KEY AUTO_INCREMENT,
-    payroll_id INT NOT NULL,
-    component_name VARCHAR(100) NOT NULL,  -- e.g., HRA, DA, PF
-    component_type ENUM('earning', 'deduction') NOT NULL,
-    amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    employee_name VARCHAR(150) NOT NULL, -- Employee's name
 
-    FOREIGN KEY (payroll_id) REFERENCES payroll_master(payroll_id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
+    basic_salary DECIMAL(10,2) DEFAULT NULL, -- Added column for Basic Salary
+
+    other_earnings DECIMAL(10,2) DEFAULT NULL,
+    total_deductions DECIMAL(10,2) DEFAULT NULL,
+    gross_salary DECIMAL(10,2) DEFAULT NULL,
+    employee_net_salary DECIMAL(10,2) DEFAULT NULL, 
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
 );
+
+CREATE TABLE EmployeeSalaryPartition (
+    partition_id INT PRIMARY KEY AUTO_INCREMENT,
+    salary_id INT NOT NULL,
+    component_name VARCHAR(100) NOT NULL,  -- e.g., Basic Salary, HRA, PF
+    component_type ENUM('earning', 'deduction') NOT NULL,
+    input_type ENUM('Flat', 'Percentage') DEFAULT NULL, -- your dropdown
+    value DECIMAL(10,2) DEFAULT NULL,       -- entered value
+    based_on VARCHAR(100) DEFAULT NULL,     -- e.g., "Basic Salary"
+    amount DECIMAL(10,2) DEFAULT NULL,      -- final calculated amount
+
+    FOREIGN KEY (salary_id) REFERENCES EmployeeSalaryInfo(salary_id)
+);
+select * from EmployeeSalaryInfo;
+select * from EmployeeSalaryPartition;
+
+
+drop table EmployeeSalaryInfo;
+drop table EmployeeSalaryPartition;
 
 show tables;
 drop table payroll_components;
@@ -560,42 +557,56 @@ INSERT INTO attendance (emp_id, emp_name, date, check_in, check_out, work_day) V
 (4, 'Vivaan Mehta', '2025-07-30', '09:10:00', '17:50:00', 1),
 (4, 'Vivaan Mehta', '2025-07-31', NULL, NULL, 0); -- Absent
 
+drop table attendance;
+drop table leave_applications;
 -- -----------------------------
 -- =============LEAVE APPLICATIONS======
+-- Leave applications for Admin User (employee_id = 1)
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, leave_mode, from_date, to_date, no_of_days, reason, status) VALUES
+(1, 'Admin User', 'LWP(Leave Without Pay)', 'Free', '2025-07-05', '2025-07-05', 1, 'Weekend family event', 'Approved'),
+(1, 'Admin User', 'SL(Sick Leave)', 'Paid', '2025-07-08', '2025-07-08', 1, 'Not feeling well', 'Approved'),
+(1, 'Admin User', 'EL(Earned Leave)', 'Paid', '2025-07-09', '2025-07-09', 1, 'Need a day off', 'Pending'),
+(1, 'Admin User', 'LWP(Leave Without Pay)', 'Free', '2025-07-12', '2025-07-12', 1, 'Personal work', 'Approved'),
+(1, 'Admin User', 'CL(Casual Leave)', 'Paid', '2025-07-14', '2025-07-14', 1, 'Family visit', 'Rejected'),
+(1, 'Admin User', 'EL(Earned Leave)', 'Paid', '2025-07-17', '2025-07-17', 1, 'Taking a break', 'Approved'),
+(1, 'Admin User', 'LWP(Leave Without Pay)', 'Free', '2025-07-23', '2025-07-23', 1, 'Doctor appointment', 'Approved'),
+(1, 'Admin User', 'CL(Casual Leave)', 'Paid', '2025-07-26', '2025-07-26', 1, 'Family function', 'Approved'),
+(1, 'Admin User', 'EL(Earned Leave)', 'Paid', '2025-07-31', '2025-07-31', 1, 'Personal day', 'Approved');
+
 -- Leave applications for Reyansh Patel (employee_id = 2)
-INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
-(2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-07', '2025-07-07', 1, 'Personal work', 'Pending'),
-(2, 'Reyansh Patel', 'SL(Sick Leave)', '2025-07-10', '2025-07-10', 1, 'Fever', 'Approved'),
-(2, 'Reyansh Patel', 'EL(Earned Leave)', '2025-07-11', '2025-07-11', 1, 'Day off', 'Rejected'),
-(2, 'Reyansh Patel', 'LWP(Leave Without Pay)', '2025-07-18', '2025-07-18', 1, 'Relative visiting', 'Approved'),
-(2, 'Reyansh Patel', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Out of town', 'Approved'),
-(2, 'Reyansh Patel', 'SL(Sick Leave)', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
-(2, 'Reyansh Patel', 'EL(Earned Leave)', '2025-07-29', '2025-07-29', 1, 'Personal errands', 'Approved');
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, leave_mode, from_date, to_date, no_of_days, reason, status) VALUES
+(2, 'Reyansh Patel', 'CL(Casual Leave)', 'Paid', '2025-07-07', '2025-07-07', 1, 'Personal work', 'Pending'),
+(2, 'Reyansh Patel', 'SL(Sick Leave)', 'Paid', '2025-07-10', '2025-07-10', 1, 'Fever', 'Approved'),
+(2, 'Reyansh Patel', 'EL(Earned Leave)', 'Paid', '2025-07-11', '2025-07-11', 1, 'Day off', 'Rejected'),
+(2, 'Reyansh Patel', 'LWP(Leave Without Pay)', 'Free', '2025-07-18', '2025-07-18', 1, 'Relative visiting', 'Approved'),
+(2, 'Reyansh Patel', 'CL(Casual Leave)', 'Paid', '2025-07-19', '2025-07-19', 1, 'Out of town', 'Approved'),
+(2, 'Reyansh Patel', 'SL(Sick Leave)', 'Paid', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
+(2, 'Reyansh Patel', 'EL(Earned Leave)', 'Paid', '2025-07-29', '2025-07-29', 1, 'Personal errands', 'Approved');
 
 -- Leave applications for Aarav Sharma (employee_id = 3)
-INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
-(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Weekend trip', 'Approved'),
-(3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-08', '2025-07-08', 1, 'Need a break', 'Rejected'),
-(3, 'Aarav Sharma', 'LWP(Leave Without Pay)', '2025-07-11', '2025-07-11', 1, 'Not feeling well', 'Approved'),
-(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-14', '2025-07-14', 1, 'Personal work', 'Pending'),
-(3, 'Aarav Sharma', 'EL(Earned Leave)', '2025-07-16', '2025-07-16', 1, 'Mental health day', 'Approved'),
-(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-19', '2025-07-19', 1, 'Family event', 'Approved'),
-(3, 'Aarav Sharma', 'LWP(Leave Without Pay)', '2025-07-25', '2025-07-25', 1, 'Personal work', 'Approved'),
-(3, 'Aarav Sharma', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Weekend getaway', 'Approved');
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, leave_mode, from_date, to_date, no_of_days, reason, status) VALUES
+(3, 'Aarav Sharma', 'CL(Casual Leave)', 'Paid', '2025-07-05', '2025-07-05', 1, 'Weekend trip', 'Approved'),
+(3, 'Aarav Sharma', 'EL(Earned Leave)', 'Paid', '2025-07-08', '2025-07-08', 1, 'Need a break', 'Rejected'),
+(3, 'Aarav Sharma', 'LWP(Leave Without Pay)', 'Free', '2025-07-11', '2025-07-11', 1, 'Not feeling well', 'Approved'),
+(3, 'Aarav Sharma', 'CL(Casual Leave)', 'Paid', '2025-07-14', '2025-07-14', 1, 'Personal work', 'Pending'),
+(3, 'Aarav Sharma', 'EL(Earned Leave)', 'Paid', '2025-07-16', '2025-07-16', 1, 'Mental health day', 'Approved'),
+(3, 'Aarav Sharma', 'CL(Casual Leave)', 'Paid', '2025-07-19', '2025-07-19', 1, 'Family event', 'Approved'),
+(3, 'Aarav Sharma', 'LWP(Leave Without Pay)', 'Free', '2025-07-25', '2025-07-25', 1, 'Personal work', 'Approved'),
+(3, 'Aarav Sharma', 'CL(Casual Leave)', 'Paid', '2025-07-26', '2025-07-26', 1, 'Weekend getaway', 'Approved');
 
 -- Leave applications for Vivaan Mehta (employee_id = 4)
-INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_date, to_date, no_of_days, reason, status) VALUES
-(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', '2025-07-03', '2025-07-03', 1, 'Fever and cold', 'Approved'),
-(4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-04', '2025-07-04', 1, 'Need a day off', 'Pending'),
-(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-05', '2025-07-05', 1, 'Personal commitment', 'Approved'),
-(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-08', '2025-07-08', 1, 'Family visit', 'Rejected'),
-(4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-11', '2025-07-11', 1, 'Day off', 'Approved'),
-(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-15', '2025-07-15', 1, 'Medical checkup', 'Approved'),
-(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', '2025-07-19', '2025-07-19', 1, 'Family function', 'Approved'),
-(4, 'Vivaan Mehta', 'SL(Sick Leave)', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
-(4, 'Vivaan Mehta', 'EL(Earned Leave)', '2025-07-24', '2025-07-24', 1, 'Personal day', 'Approved'),
-(4, 'Vivaan Mehta', 'CL(Casual Leave)', '2025-07-26', '2025-07-26', 1, 'Out of station', 'Approved'),
-(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', '2025-07-31', '2025-07-31', 1, 'Not feeling well', 'Approved');
+INSERT INTO leave_applications (employee_id, employee_name, leave_type, leave_mode, from_date, to_date, no_of_days, reason, status) VALUES
+(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', 'Free', '2025-07-03', '2025-07-03', 1, 'Fever and cold', 'Approved'),
+(4, 'Vivaan Mehta', 'EL(Earned Leave)', 'Paid', '2025-07-04', '2025-07-04', 1, 'Need a day off', 'Pending'),
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', 'Paid', '2025-07-05', '2025-07-05', 1, 'Personal commitment', 'Approved'),
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', 'Paid', '2025-07-08', '2025-07-08', 1, 'Family visit', 'Rejected'),
+(4, 'Vivaan Mehta', 'EL(Earned Leave)', 'Paid', '2025-07-11', '2025-07-11', 1, 'Day off', 'Approved'),
+(4, 'Vivaan Mehta', 'SL(Sick Leave)', 'Paid', '2025-07-15', '2025-07-15', 1, 'Medical checkup', 'Approved'),
+(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', 'Free', '2025-07-19', '2025-07-19', 1, 'Family function', 'Approved'),
+(4, 'Vivaan Mehta', 'SL(Sick Leave)', 'Paid', '2025-07-22', '2025-07-22', 1, 'Not feeling well', 'Pending'),
+(4, 'Vivaan Mehta', 'EL(Earned Leave)', 'Paid', '2025-07-24', '2025-07-24', 1, 'Personal day', 'Approved'),
+(4, 'Vivaan Mehta', 'CL(Casual Leave)', 'Paid', '2025-07-26', '2025-07-26', 1, 'Out of station', 'Approved'),
+(4, 'Vivaan Mehta', 'LWP(Leave Without Pay)', 'Free', '2025-07-31', '2025-07-31', 1, 'Not feeling well', 'Approved');
 
 
 
@@ -603,8 +614,7 @@ INSERT INTO leave_applications (employee_id, employee_name, leave_type, from_dat
 
 
 
-
-select * from attendance;
+select * from attendance where emp_id=2;
 select * from leave_applications;
 
 
