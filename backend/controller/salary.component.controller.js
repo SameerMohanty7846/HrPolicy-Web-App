@@ -528,6 +528,7 @@ export const getMonthlySalaryData = (req, res) => {
 
   (async () => {
     try {
+      // Attendance
       const attendance = await executeQuery(`
         SELECT 
           a.emp_id AS employee_id,
@@ -542,6 +543,7 @@ export const getMonthlySalaryData = (req, res) => {
       const firstDay = `${yearNumber}-${String(monthNumber).padStart(2, '0')}-01`;
       const lastDay = new Date(yearNumber, monthNumber, 0).toISOString().split('T')[0];
 
+      // Paid Leaves
       const paidLeaves = await executeQuery(`
         SELECT 
           la.employee_id,
@@ -564,6 +566,7 @@ export const getMonthlySalaryData = (req, res) => {
         GROUP BY la.employee_id, e.name
       `, [lastDay, firstDay, firstDay, lastDay]);
 
+      // Salary Info (latest per employee)
       const salaryInfo = await executeQuery(`
         SELECT 
           s.employee_id, 
@@ -575,25 +578,34 @@ export const getMonthlySalaryData = (req, res) => {
           SELECT employee_id, MAX(created_at) AS max_created_at
           FROM EmployeeSalaryInfo
           GROUP BY employee_id
-        ) latest ON latest.employee_id = s.employee_id AND latest.max_created_at = s.created_at
+        ) latest 
+          ON latest.employee_id = s.employee_id 
+         AND latest.max_created_at = s.created_at
       `);
 
+      // Salary Partitions with days_calculated from policy master
       const salaryPartitions = await executeQuery(`
         SELECT 
           esp.salary_id,
           esp.component_name,
           esp.component_type,
           esp.amount,
-          esi.employee_id
+          esi.employee_id,
+          COALESCE(spm.days_calculated, 1) AS days_calculated
         FROM EmployeeSalaryPartition esp
         JOIN EmployeeSalaryInfo esi ON esp.salary_id = esi.salary_id
         JOIN (
           SELECT employee_id, MAX(created_at) AS max_created_at
           FROM EmployeeSalaryInfo
           GROUP BY employee_id
-        ) latest ON latest.employee_id = esi.employee_id AND latest.max_created_at = esi.created_at
+        ) latest 
+          ON latest.employee_id = esi.employee_id 
+         AND latest.max_created_at = esi.created_at
+        LEFT JOIN salary_component_policy_master spm 
+          ON spm.name = esp.component_name
       `);
 
+      // Maps for quick lookup
       const nameMap = new Map();
       const attendanceMap = new Map();
       attendance.forEach(row => {
@@ -628,16 +640,19 @@ export const getMonthlySalaryData = (req, res) => {
         partitionsMap.get(empId).push({
           component_name: row.component_name,
           component_type: row.component_type,
-          amount: Number(row.amount) || 0
+          amount: Number(row.amount) || 0,
+          days_calculated: Number(row.days_calculated) || 0
         });
       });
 
+      // Collect all employee IDs
       const allEmpIds = new Set([
         ...attendance.map(row => row.employee_id),
         ...paidLeaves.map(row => row.employee_id),
         ...salaryInfo.map(row => row.employee_id)
       ]);
 
+      // Build final report
       let report = Array.from(allEmpIds).map(empId => ({
         employee_id: empId,
         employee_name: nameMap.get(empId) || '',
@@ -647,18 +662,18 @@ export const getMonthlySalaryData = (req, res) => {
         partitions: partitionsMap.get(empId) || []
       }));
 
-      // ✅ Exclude the first data record
+      // Exclude the first data record
       if (report.length > 0) {
         report = report.slice(1);
       }
 
-      // ✅ If all have 0 days_present and 0 paid_leaves → return no data found
+      // If all have 0 days_present and 0 paid_leaves → return no data found
       const allZero = report.every(r => r.days_present === 0 && r.paid_leaves === 0);
       if (report.length === 0 || allZero) {
         return res.status(404).json({ message: 'No data found' });
       }
 
-      // ✅ Additional fields
+      // Additional fields
       const monthNames = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
