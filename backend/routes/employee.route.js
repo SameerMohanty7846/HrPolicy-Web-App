@@ -60,7 +60,7 @@ import {
   getMonthlyLeaveSummaryByMode
 } from "../controller/leave.controller.js";
 import { getAttendanceReport, getMonthlySalaryReport, insertSalaryReport } from "../controller/employee.attendance.controller.js";
-import { addEmployeeSalary, createSalaryComponent, getAllSalaryComponents, getAllSalaryComponentsExcludingFirst, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType, getFreeLeavesByEmployeeAndMonth, getMonthlySalaryData, saveSalaryReports } from "../controller/salary.component.controller.js";
+import {addOrUpdateEmployeeSalary, createSalaryComponent, getAllSalaryComponents, getAllSalaryComponentsExcludingFirst, getComponentById, getComponentByName, getComponentsByType, getComponentsByValueType, getEmployeeSalaryInfo, getFreeLeavesByEmployeeAndMonth, getMonthlySalaryData, saveSalaryReports } from "../controller/salary.component.controller.js";
 
 const router = express.Router();
 
@@ -164,8 +164,16 @@ router.get('/leaves/free/:employee_id/:monthYear', getFreeLeavesByEmployeeAndMon
 // // Instead of :employee_id/:month/:year
 // router.get('/payroll-list/:month/:year', getAllPayrolls);
 
-router.post('/salary/employee-salary-info', addEmployeeSalary);
+// router.post('/salary/employee-salary-info', addEmployeeSalary);
 router.get('/payroll-report/:year/:month', getMonthlySalaryData);
 router.post("/monthly-salary-reports", saveSalaryReports);
+
+
+//new updates 
+// In your employee.route.js:
+
+router.get('/salary/employee-salary-info/:employeeId', getEmployeeSalaryInfo);
+router.post('/salary/employee-salary-info', addOrUpdateEmployeeSalary);
+router.put('/salary/employee-salary-info', addOrUpdateEmployeeSalary);
 
 export default router;

@@ -9,6 +9,7 @@ const EmployeePayroll = () => {
   const initialSalaryComponentsState = [];
   const initialComponentValuesState = {};
   const initialBasicSalaryState = 0;
+  const initialExistingSalaryIdState = null;
 
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(initialEmployeeState);
@@ -17,6 +18,15 @@ const EmployeePayroll = () => {
   const [salaryComponents, setSalaryComponents] = useState(initialSalaryComponentsState);
   const [componentValues, setComponentValues] = useState(initialComponentValuesState);
   const [basicSalary, setBasicSalary] = useState(initialBasicSalaryState);
+  const [existingSalaryId, setExistingSalaryId] = useState(initialExistingSalaryIdState);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Helper function to safely convert to number
+  const toNumber = (value) => {
+    if (typeof value === 'number') return value;
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : num;
+  };
 
   // Function to reset all states to initial values
   const resetAllStates = () => {
@@ -25,6 +35,7 @@ const EmployeePayroll = () => {
     setShowSalaryInput(initialShowSalaryInputState);
     setComponentValues(initialComponentValuesState);
     setBasicSalary(initialBasicSalaryState);
+    setExistingSalaryId(initialExistingSalaryIdState);
   };
 
   useEffect(() => {
@@ -47,18 +58,20 @@ const EmployeePayroll = () => {
         
         components.forEach(comp => {
           const isBasicSalary = comp.name.toLowerCase() === 'basic salary';
+          const amount = toNumber(comp.default_value);
+          
           initialValues[comp.id] = {
             enabled: isBasicSalary,
             value: comp.default_value || '0',
             type: comp.type,
             value_type: isBasicSalary ? 'flat' : (comp.value_type || 'percentage'),
             based_on: comp.based_on,
-            amount: comp.default_value ? parseFloat(comp.default_value) : 0,
+            amount: amount,
             name: comp.name
           };
           
           if (isBasicSalary) {
-            basicSal = comp.default_value ? parseFloat(comp.default_value) : 0;
+            basicSal = amount;
             setBasicSalary(basicSal);
           }
         });
@@ -75,10 +88,87 @@ const EmployeePayroll = () => {
         setSelectedEmployeeName(employee.name);
       }
       setShowSalaryInput(true);
+      fetchExistingSalaryData(selectedEmployee);
     } else {
       setShowSalaryInput(false);
     }
   }, [selectedEmployee, employees]);
+
+  const fetchExistingSalaryData = async (employeeId) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`http://localhost:2000/api/salary/employee-salary-info/${employeeId}`);
+      
+      if (response.data) {
+        const { salaryInfo, partitions } = response.data;
+        
+        // Set the existing salary ID for update purposes
+        setExistingSalaryId(salaryInfo.salary_id);
+        
+        // Set basic salary
+        setBasicSalary(toNumber(salaryInfo.basic_salary));
+        
+        // Update component values based on existing data
+        const updatedComponentValues = { ...componentValues };
+        
+        // First, disable all components except basic salary
+        Object.keys(updatedComponentValues).forEach(id => {
+          const isBasic = updatedComponentValues[id].name.toLowerCase() === 'basic salary';
+          updatedComponentValues[id] = {
+            ...updatedComponentValues[id],
+            enabled: isBasic,
+            value: isBasic ? salaryInfo.basic_salary.toString() : '0',
+            amount: isBasic ? toNumber(salaryInfo.basic_salary) : 0
+          };
+        });
+        
+        // Then enable and set values for components that exist in partitions
+        partitions.forEach(partition => {
+          const componentId = Object.keys(updatedComponentValues).find(
+            id => updatedComponentValues[id].name === partition.component_name
+          );
+          
+          if (componentId) {
+            updatedComponentValues[componentId] = {
+              ...updatedComponentValues[componentId],
+              enabled: true,
+              value: partition.value.toString(),
+              type: partition.component_type,
+              value_type: partition.input_type === 'Percentage' ? 'percentage' : 'flat',
+              based_on: partition.based_on,
+              amount: toNumber(partition.amount),
+              name: partition.component_name
+            };
+          }
+        });
+        
+        setComponentValues(updatedComponentValues);
+      } else {
+        // No existing data found, reset to defaults
+        setExistingSalaryId(null);
+        const initialValues = {};
+        salaryComponents.forEach(comp => {
+          const isBasicSalary = comp.name.toLowerCase() === 'basic salary';
+          initialValues[comp.id] = {
+            enabled: isBasicSalary,
+            value: comp.default_value || '0',
+            type: comp.type,
+            value_type: isBasicSalary ? 'flat' : (comp.value_type || 'percentage'),
+            based_on: comp.based_on,
+            amount: toNumber(comp.default_value),
+            name: comp.name
+          };
+        });
+        setComponentValues(initialValues);
+      }
+    } catch (error) {
+      console.error('Error fetching existing salary data:', error);
+      // If error occurs, assume no existing data
+      setExistingSalaryId(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleComponentToggle = (componentId) => {
     const component = componentValues[componentId];
@@ -98,7 +188,7 @@ const EmployeePayroll = () => {
   const calculateAmount = (componentId, value, valueType, componentName) => {
     if (!value) return 0;
     
-    const numericValue = parseFloat(value) || 0;
+    const numericValue = toNumber(value);
     
     if (valueType === 'flat') {
       if (componentName.toLowerCase() === 'basic salary') {
@@ -112,7 +202,7 @@ const EmployeePayroll = () => {
   };
 
   const handleBasicSalaryChange = (value) => {
-    const numericValue = parseFloat(value) || 0;
+    const numericValue = toNumber(value);
     setBasicSalary(numericValue);
     
     // Update the componentValues state for basic salary
@@ -185,10 +275,10 @@ const EmployeePayroll = () => {
       if (comp.enabled) {
         if (comp.type === 'earning') {
           if (comp.name.toLowerCase() !== 'basic salary') {
-            otherEarnings += comp.amount;
+            otherEarnings += toNumber(comp.amount);
           }
         } else if (comp.type === 'deduction') {
-          totalDeductions += comp.amount;
+          totalDeductions += toNumber(comp.amount);
         }
 
         partitions.push({
@@ -197,7 +287,7 @@ const EmployeePayroll = () => {
           input_type: comp.value_type === 'percentage' ? 'Percentage' : 'Flat',
           value: comp.value,
           based_on: comp.based_on,
-          amount: comp.amount
+          amount: toNumber(comp.amount)
         });
       }
     });
@@ -219,39 +309,30 @@ const EmployeePayroll = () => {
     const salarySummary = calculateSalarySummary();
 
     const payload = {
+      salary_id: existingSalaryId || null,
       employee_id: Number(selectedEmployee),
       employee_name: selectedEmployeeName,
-      basic_salary: Number(basicSalary),
-      other_earnings: Number(salarySummary.otherEarnings.toFixed(2)),
-      total_deductions: Number(salarySummary.totalDeductions.toFixed(2)),
-      gross_salary: Number(salarySummary.grossSalary.toFixed(2)),
-      employee_net_salary: Number(salarySummary.netSalary.toFixed(2)),
+      basic_salary: toNumber(basicSalary),
+      other_earnings: toNumber(salarySummary.otherEarnings.toFixed(2)),
+      total_deductions: toNumber(salarySummary.totalDeductions.toFixed(2)),
+      gross_salary: toNumber(salarySummary.grossSalary.toFixed(2)),
+      employee_net_salary: toNumber(salarySummary.netSalary.toFixed(2)),
       partitions: salarySummary.partitions
     };
 
     console.log("Final payload:", payload);
 
     try {
-      const response = await axios.post('http://localhost:2000/api/salary/employee-salary-info', payload);
-      console.log('Success:', response.data);
-      alert('Payroll saved successfully!');
-      resetAllStates();
+      const response = existingSalaryId 
+        ? await axios.put('http://localhost:2000/api/salary/employee-salary-info', payload)
+        : await axios.post('http://localhost:2000/api/salary/employee-salary-info', payload);
       
-      // Reinitialize component values
-      const initialValues = {};
-      salaryComponents.forEach(comp => {
-        const isBasicSalary = comp.name.toLowerCase() === 'basic salary';
-        initialValues[comp.id] = {
-          enabled: isBasicSalary,
-          value: comp.default_value || '0',
-          type: comp.type,
-          value_type: isBasicSalary ? 'flat' : (comp.value_type || 'percentage'),
-          based_on: comp.based_on,
-          amount: comp.default_value ? parseFloat(comp.default_value) : 0,
-          name: comp.name
-        };
-      });
-      setComponentValues(initialValues);
+      console.log('Success:', response.data);
+      alert(`Payroll ${existingSalaryId ? 'updated' : 'saved'} successfully!`);
+      
+      if (!existingSalaryId && response.data.salary_id) {
+        setExistingSalaryId(response.data.salary_id);
+      }
       
     } catch (error) {
       console.error('Error:', error.response?.data || error.message);
@@ -274,6 +355,7 @@ const EmployeePayroll = () => {
                 className="form-select form-select-sm"
                 value={selectedEmployee}
                 onChange={(e) => setSelectedEmployee(e.target.value)}
+                disabled={isLoading}
               >
                 <option value="">Select Employee</option>
                 {employees.map(emp => (
@@ -285,9 +367,17 @@ const EmployeePayroll = () => {
             </div>
           </div>
 
-          {showSalaryInput && (
+          {isLoading && (
+            <div className="text-center my-4">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2">Loading employee payroll data...</p>
+            </div>
+          )}
+
+          {showSalaryInput && !isLoading && (
             <div className="border-top pt-3">
-              {/* Salary Components Table */}
               <div className="table-responsive mb-4">
                 <table className="table table-sm table-bordered">
                   <thead className="table-light">
@@ -305,6 +395,7 @@ const EmployeePayroll = () => {
                     {salaryComponents.map(component => {
                       const componentValue = componentValues[component.id];
                       const isBasicSalary = component.name.toLowerCase() === 'basic salary';
+                      const amount = componentValue?.enabled ? toNumber(componentValue.amount) : 0;
                       
                       return (
                         <tr key={component.id} className={componentValue?.enabled ? '' : 'text-muted'}>
@@ -376,7 +467,7 @@ const EmployeePayroll = () => {
                           </td>
                           <td className="text-end">
                             {componentValue?.enabled ? (
-                              componentValue?.amount.toFixed(2)
+                              amount.toFixed(2)
                             ) : (
                               <span className="text-muted">-</span>
                             )}
@@ -388,7 +479,6 @@ const EmployeePayroll = () => {
                 </table>
               </div>
 
-              {/* Salary Summary */}
               <div className="card bg-light mb-3">
                 <div className="card-body p-3">
                   <h6 className="small fw-bold mb-3">Salary Summary</h6>
@@ -421,13 +511,12 @@ const EmployeePayroll = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <div className="text-end">
                 <button 
                   className="btn btn-primary btn-sm"
                   onClick={handleSubmit}
                 >
-                  Save Payroll
+                  {existingSalaryId ? 'Update Payroll' : 'Save Payroll'}
                 </button>
               </div>
             </div>

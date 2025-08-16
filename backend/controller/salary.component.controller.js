@@ -414,91 +414,172 @@ export const getFreeLeavesByEmployeeAndMonth = (req, res) => {
 
 
 //storing employee information
-// Store Employee Salary Info + Salary Partitions
-export const addEmployeeSalary = (req, res) => {
-    const { 
-        employee_id,
-        employee_name,       // Name of employee
-        basic_salary,        // Basic Salary
-        other_earnings,      // New: replaces total_earnings in table
+
+// Get employee salary info
+export const getEmployeeSalaryInfo = async (req, res) => {
+  const { employeeId } = req.params;
+
+  try {
+    // 1️⃣ Get the salary info
+    const salaryInfoQuery = `
+      SELECT * FROM EmployeeSalaryInfo 
+      WHERE employee_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+
+    const [salaryInfoRows] = await db.promise().query(salaryInfoQuery, [employeeId]);
+
+    if (salaryInfoRows.length === 0) {
+      return res.status(404).json({ message: "No salary data found for this employee" });
+    }
+
+    const salaryInfo = salaryInfoRows[0];
+
+    // 2️⃣ Get the partitions
+    const partitionQuery = `
+      SELECT * FROM EmployeeSalaryPartition 
+      WHERE salary_id = ?
+    `;
+
+    const [partitionRows] = await db.promise().query(partitionQuery, [salaryInfo.salary_id]);
+
+    res.json({
+      salaryInfo,
+      partitions: partitionRows,
+    });
+  } catch (error) {
+    console.error("Error fetching employee salary info:", error);
+    res.status(500).json({ error: "Failed to fetch employee salary info", details: error.message });
+  }
+};
+
+// Create or update employee salary info
+export const addOrUpdateEmployeeSalary = async (req, res) => {
+  const {
+    salary_id, // null for new records
+    employee_id,
+    employee_name,
+    basic_salary,
+    other_earnings,
+    total_deductions,
+    gross_salary,
+    employee_net_salary,
+    partitions,
+  } = req.body;
+
+  try {
+    // Start transaction
+    await db.promise().beginTransaction();
+
+    if (salary_id) {
+      // UPDATE EXISTING RECORD
+      const updateSalaryInfoQuery = `
+        UPDATE EmployeeSalaryInfo 
+        SET 
+          basic_salary = ?,
+          other_earnings = ?,
+          total_deductions = ?,
+          gross_salary = ?,
+          employee_net_salary = ?
+        WHERE salary_id = ?
+      `;
+
+      await db.promise().query(updateSalaryInfoQuery, [
+        basic_salary,
+        other_earnings,
         total_deductions,
         gross_salary,
         employee_net_salary,
-        partitions // Array of { component_name, component_type, input_type, value, based_on, amount }
-    } = req.body;
+        salary_id,
+      ]);
 
-    db.beginTransaction((err) => {
-        if (err) {
-            return res.status(500).json({ error: 'Transaction start failed', details: err });
-        }
+      // Delete old partitions
+      const deletePartitionsQuery = `DELETE FROM EmployeeSalaryPartition WHERE salary_id = ?`;
+      await db.promise().query(deletePartitionsQuery, [salary_id]);
 
-        // 1️⃣ Insert into EmployeeSalaryInfo
-        const salaryInfoQuery = `
-            INSERT INTO EmployeeSalaryInfo 
-                (employee_id, employee_name, basic_salary, other_earnings, total_deductions, gross_salary, employee_net_salary)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+      // Insert new partitions (if any)
+      if (partitions && partitions.length > 0) {
+        const partitionQuery = `
+          INSERT INTO EmployeeSalaryPartition 
+            (salary_id, component_name, component_type, input_type, value, based_on, amount)
+          VALUES ?
         `;
-        const salaryInfoValues = [
-            employee_id, employee_name, basic_salary, other_earnings, total_deductions, gross_salary, employee_net_salary
-        ];
 
-        db.query(salaryInfoQuery, salaryInfoValues, (err, result) => {
-            if (err) {
-                return db.rollback(() => {
-                    res.status(500).json({ error: 'Failed to insert salary info', details: err });
-                });
-            }
+        const partitionValues = partitions.map((p) => [
+          salary_id,
+          p.component_name,
+          p.component_type,
+          p.input_type || null,
+          p.value || null,
+          p.based_on || null,
+          p.amount || null,
+        ]);
 
-            const salaryId = result.insertId; // Generated salary_id for linking
+        await db.promise().query(partitionQuery, [partitionValues]);
+      }
 
-            // 2️⃣ Insert into EmployeeSalaryPartition (if any)
-            if (!partitions || partitions.length === 0) {
-                return db.commit((err) => {
-                    if (err) {
-                        return db.rollback(() => {
-                            res.status(500).json({ error: 'Transaction commit failed', details: err });
-                        });
-                    }
-                    res.status(201).json({ message: 'Salary data saved successfully (no partitions)', salary_id: salaryId });
-                });
-            }
+      await db.promise().commit();
+      return res.status(200).json({ message: "Salary data updated successfully", salary_id });
+    } else {
+      // CREATE NEW RECORD
+      const salaryInfoQuery = `
+        INSERT INTO EmployeeSalaryInfo 
+          (employee_id, employee_name, basic_salary, other_earnings, total_deductions, gross_salary, employee_net_salary)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
 
-            const partitionQuery = `
-                INSERT INTO EmployeeSalaryPartition 
-                    (salary_id, component_name, component_type, input_type, value, based_on, amount)
-                VALUES ?
-            `;
+      const [result] = await db.promise().query(salaryInfoQuery, [
+        employee_id,
+        employee_name,
+        basic_salary,
+        other_earnings,
+        total_deductions,
+        gross_salary,
+        employee_net_salary,
+      ]);
 
-            const partitionValues = partitions.map(p => [
-                salaryId,
-                p.component_name,
-                p.component_type,
-                p.input_type || null,
-                p.value || null,
-                p.based_on || null,
-                p.amount || null
-            ]);
+      const newSalaryId = result.insertId;
 
-            db.query(partitionQuery, [partitionValues], (err) => {
-                if (err) {
-                    return db.rollback(() => {
-                        res.status(500).json({ error: 'Failed to insert salary partitions', details: err });
-                    });
-                }
+      // Insert partitions
+      if (partitions && partitions.length > 0) {
+        const partitionQuery = `
+          INSERT INTO EmployeeSalaryPartition 
+            (salary_id, component_name, component_type, input_type, value, based_on, amount)
+          VALUES ?
+        `;
 
-                // ✅ Commit transaction
-                db.commit((err) => {
-                    if (err) {
-                        return db.rollback(() => {
-                            res.status(500).json({ error: 'Transaction commit failed', details: err });
-                        });
-                    }
-                    res.status(201).json({ message: 'Salary data saved successfully', salary_id: salaryId });
-                });
-            });
-        });
+        const partitionValues = partitions.map((p) => [
+          newSalaryId,
+          p.component_name,
+          p.component_type,
+          p.input_type || null,
+          p.value || null,
+          p.based_on || null,
+          p.amount || null,
+        ]);
+
+        await db.promise().query(partitionQuery, [partitionValues]);
+      }
+
+      await db.promise().commit();
+      return res.status(201).json({ message: "Salary data saved successfully", salary_id: newSalaryId });
+    }
+  } catch (error) {
+    await db.promise().rollback();
+    console.error("Error:", error);
+    res.status(500).json({
+      error: salary_id ? "Failed to update payroll" : "Failed to save payroll",
+      details: error.message,
     });
+  }
 };
+
+
+
+
+
+
 
 // GET /api/reports/salary/:month/:year
 export const getMonthlySalaryData = (req, res) => {
