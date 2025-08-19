@@ -171,7 +171,7 @@ CREATE TABLE leave_applications (
   applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
 );
-drop table leave_applications;
+select * from  leave_applications;
 CREATE TABLE hr_leave_policy (
   id INT PRIMARY KEY AUTO_INCREMENT,
   leave_type VARCHAR(50) NOT NULL UNIQUE,     -- e.g., Earned, Casual, Sick, etc.
@@ -237,6 +237,7 @@ CREATE TABLE salary_component_policy_master (
     based_on VARCHAR(50),
     days_calculated BOOLEAN NOT NULL DEFAULT 1
 );
+select * from salary_component_policy_master;
 CREATE TABLE EmployeeSalaryInfo (
     salary_id INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT NOT NULL,
@@ -268,6 +269,36 @@ CREATE TABLE EmployeeSalaryPartition (
 );
 select * from EmployeeSalaryInfo;
 select * from EmployeeSalaryPartition;
+
+CREATE TABLE salary_report (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    month_year VARCHAR(15) NOT NULL,     -- e.g. 'July-2025'
+    month TINYINT NOT NULL,              -- 1 to 12
+    year YEAR NOT NULL,
+    total_days TINYINT NOT NULL,         -- e.g. 31
+    employee_id INT NOT NULL,
+    employee_name VARCHAR(100) NOT NULL,
+    days_present TINYINT NOT NULL,
+    paid_leaves TINYINT NOT NULL,
+    
+    employee_salary DECIMAL(10,2) NOT NULL, -- fixed salary
+
+    earnings JSON,                       -- dynamic earnings breakdown
+    deductions JSON,                     -- dynamic deductions breakdown
+
+    total_earnings DECIMAL(10,2) DEFAULT 0,
+    total_deductions DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL,  -- final payable amount
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+drop table salary_report;
+select * from EmployeeSalaryInfo;
+select * from salary_report;
+
+use hr_policy_db;
+
+
 
 
 drop table EmployeeSalaryInfo;
